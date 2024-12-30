@@ -1,20 +1,21 @@
-from dydx3.constants import API_HOST_GOERLI, API_HOST_MAINNET
+import dydx_v4_client.network as network
 from decouple import config
+import asyncio
 
 # !!!! SELECT MODE !!!!
 MODE = "DEVELOPMENT"
 
 # Close all open positions and orders
-ABORT_ALL_POSITIONS = True
+ABORT_ALL_POSITIONS = False
 
 # Find Cointegrated Pairs
-FIND_COINTEGRATED = True
+FIND_COINTEGRATED = False
 
 # Manage Exits
-MANAGE_EXITS = True
+MANAGE_EXITS = False
 
 # Place Trades
-PLACE_TRADES = True
+PLACE_TRADES = False
 
 # Resolution
 RESOLUTION = "1HOUR"
@@ -31,33 +32,24 @@ USD_MIN_COLLATERAL = 1880
 # Thresholds - Closing
 CLOSE_AT_ZSCORE_CROSS = True
 
-# Ethereum Address
-ETHEREUM_ADDRESS = "0xe02809A6fEd4F98D6Ed8974C02818c9e3b7e7448"
+# Ralph Grewe: The following sections are modified. Ethereum Address is not required any longer.
+# The DYDX Address and mnemonic retrived as described in the README.md are used insted.
 
-# KEYS - PRODUCTION
-# Must be on Mainnet in DYDX
-STARK_PRIVATE_KEY_MAINNET = config("STARK_PRIVATE_KEY_MAINNET")
-DYDX_API_KEY_MAINNET = config("DYDX_API_KEY_MAINNET")
-DYDX_API_SECRET_MAINNET = config("DYDX_API_SECRET_MAINNET")
-DYDX_API_PASSPHRASE_MAINNET = config("DYDX_API_PASSPHRASE_MAINNET")
+# Testnet Information
+DYDX_ADDRESS_TESTNET = config("DYDX_ADDRESS_DEV")
+DYDX_MNEMONIC_TESTNET = config("DYDX_MNEMONIC_DEV")
+HTTP_PROVIDER_TESTNET = ""
 
-# KEYS - DEVELOPMENT
-# Must be on Testnet in DYDX
-STARK_PRIVATE_KEY_TESTNET = config("STARK_PRIVATE_KEY_TESTNET")
-DYDX_API_KEY_TESTNET = config("DYDX_API_KEY_TESTNET")
-DYDX_API_SECRET_TESTNET =config("DYDX_API_SECRET_TESTNET")
-DYDX_API_PASSPHRASE_TESTNET = config("DYDX_API_PASSPHRASE_TESTNET")
+# Mainnet Information
+DYDX_ADDRESS_MAINNET = config("DYDX_ADDRESS_PROD")
+DYDX_MNEMONIC_MAINNET = config("DYDX_MNEMONIC_PROD")
+HTTP_PROVIDER_MAINNET = ""
 
-# KEYS - Export
-STARK_PRIVATE_KEY = STARK_PRIVATE_KEY_MAINNET if MODE == "PRODUCTION" else STARK_PRIVATE_KEY_TESTNET
-DYDX_API_KEY = DYDX_API_KEY_MAINNET if MODE == "PRODUCTION" else DYDX_API_KEY_TESTNET
-DYDX_API_SECRET = DYDX_API_SECRET_MAINNET if MODE == "PRODUCTION" else DYDX_API_SECRET_TESTNET
-DYDX_API_PASSPHRASE = DYDX_API_PASSPHRASE_MAINNET if MODE == "PRODUCTION" else DYDX_API_PASSPHRASE_TESTNET
-
-# HOST - Export
-HOST = API_HOST_MAINNET if MODE == "PRODUCTION" else API_HOST_GOERLI
-
-# HTTP PROVIDER
-HTTP_PROVIDER_MAINNET = "https://eth-mainnet.g.alchemy.com/v2/C38A2E03uos12XB0zaw4OhkHEZm5Io8T"
-HTTP_PROVIDER_TESTNET = "https://eth-goerli.g.alchemy.com/v2/b9CmjVOibZ3s90EAMdjalLg8Q4sVzfdQ"
+# Chose Configuration
+DYDX_ADDRESS = DYDX_ADDRESS_MAINNET if MODE == "PRODUCTION" else DYDX_ADDRESS_TESTNET
+DYDX_MNEMONIC = "NOTHING" if MODE == "PRODUCTION" else DYDX_MNEMONIC_TESTNET
+HOST = network if MODE == "PRODUCTION" else network.TESTNET
 HTTP_PROVIDER = HTTP_PROVIDER_MAINNET if MODE == "PRODUCTION" else HTTP_PROVIDER_TESTNET
+
+# Ralph Grewe: New API is Asyncronous - Adding a lock for thread safety (still there are some strange issues)
+WALLET_LOCK = asyncio.Lock()

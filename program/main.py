@@ -7,17 +7,19 @@ from func_entry_pairs import open_positions
 from func_exit_pairs import manage_trade_exits
 from func_messaging import send_message
 
-
 # MAIN FUNCTION
-if __name__ == "__main__":
+# Ralph Grewe: we need to have a "async" function here which we then can call using asyncio.run()
+import asyncio
 
+async def main():
   # Message on start
   send_message("Bot launch successful")
 
   # Connect to client
   try:
     print("Connecting to Client...")
-    client = connect_dydx()
+    # Ralph Grewe: We have to await because it's an async function
+    node, indexer, wallet = await connect_dydx()
   except Exception as e:
     print("Error connecting to client: ", e)
     send_message(f"Failed to connect to client {e}")
@@ -79,3 +81,6 @@ if __name__ == "__main__":
         print("Error trading pairs: ", e)
         send_message(f"Error opening trades {e}")
         exit(1)
+
+if __name__ == "__main__":
+  asyncio.run(main())
