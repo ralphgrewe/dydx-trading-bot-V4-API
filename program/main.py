@@ -29,7 +29,7 @@ async def main():
   if ABORT_ALL_POSITIONS:
     try:
       print("Closing all positions...")
-      close_orders = abort_all_positions(client)
+      close_orders = await abort_all_positions(node, indexer, wallet)
     except Exception as e:
       print("Error closing all positions: ", e)
       send_message(f"Error closing all positions {e}")
@@ -60,7 +60,9 @@ async def main():
       exit(1)
 
   # Run as always on
-  while True:
+  #while True:
+  # Ralph Grewe: Don't run until it's fixed for V4 API
+  while False:
 
     # Place trades for opening positions
     if MANAGE_EXITS:

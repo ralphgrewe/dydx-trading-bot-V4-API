@@ -5,6 +5,14 @@ import json
 
 from pprint import pprint
 
+#Ralph Grewe: Additional Imports
+from constants import DYDX_ADDRESS
+from dydx_v4_client.node.market import Market
+from dydx_v4_client import MAX_CLIENT_ID, OrderFlags
+from v4_proto.dydxprotocol.clob.order_pb2 import Order
+from dydx_v4_client.indexer.rest.constants import OrderType
+import random
+
 
 # Get existing open positions
 def is_open_positions(client, market):
@@ -33,56 +41,84 @@ def check_order_status(client, order_id):
       return order.data["order"]["status"]
   return "FAILED"
 
+# Ralph Grewe: Function to place market order using V4 API. 
+async def place_market_order(indexer, node, wallet, market_id, side, size, price, reduce_only):
+    markets = await indexer.markets.get_perpetual_markets(market_id)
+    market = Market(markets["markets"][market_id])     
+    order_id = market.order_id(
+        DYDX_ADDRESS, 0, random.randint(0, MAX_CLIENT_ID), OrderFlags.SHORT_TERM
+    )
 
-# Place market order
-def place_market_order(client, market, side, size, price, reduce_only):
-  # Get Position Id
-  account_response = client.private.get_account()
-  position_id = account_response.data["account"]["positionId"]
+    good_til_block = await node.latest_block_height() + 10
+    print(good_til_block)
+    new_order = market.order(
+        order_id = order_id,
+        order_type = OrderType.MARKET,
+        side = side,
+        size = size,
+        price = price,
+        time_in_force=Order.TimeInForce.TIME_IN_FORCE_UNSPECIFIED,
+        reduce_only = reduce_only,
+        good_til_block = good_til_block
+    )
 
-  # Get expiration time
-  server_time = client.public.get_time()
-  expiration = datetime.fromisoformat(server_time.data["iso"].replace("Z", "")) + timedelta(seconds=70)
+    transaction = await node.place_order(
+        wallet=wallet,
+        order=new_order,
+    )
+    wallet.sequence += 1
 
-  # Place an order
-  placed_order = client.private.create_order(
-    position_id=position_id, # required for creating the order signature
-    market=market,
-    side=side,
-    order_type="MARKET",
-    post_only=False,
-    size=size,
-    price=price,
-    limit_fee='0.015',
-    expiration_epoch_seconds=expiration.timestamp(),
-    time_in_force="FOK", 
-    reduce_only=reduce_only
-  )
+    return transaction
 
-  # print(placed_order.data)
+# Ralph Grewe: Additional function to cancel all orders
+# Abort all open positions
+async def cancel_all_orders(node, indexer, wallet):
+  orders_response = await indexer.account.get_subaccount_orders(DYDX_ADDRESS, 0)
+  orders = orders_response
 
-  # Return result
-  return placed_order.data
+  open_orders = []
+  for order in orders:
+      if order['status'] == "OPEN":
+          open_orders.append(order)
+  
+  print("Orders for Address: " + DYDX_ADDRESS)
+  pprint(open_orders)
+  good_til_block = await node.latest_block_height()
+  
+  for order in open_orders:
+      cancel = await node.cancel_order(wallet, order['id'], good_til_block=good_til_block + 10)
+      print(cancel)
 
+# Ralph Grewe: Get open (perpetual) positions
+async def get_open_positions(indexer):
+  orders_response = await indexer.account.get_subaccount_orders(DYDX_ADDRESS, 0)
+  orders = orders_response
+
+  open_orders = []
+  for order in orders:
+      if order['status'] == "OPEN":
+          open_orders.append(order)
+  
+  print("Orders for Address: " + DYDX_ADDRESS)
+  pprint(open_orders)
 
 # Abort all open positions
-def abort_all_positions(client):
+async def abort_all_positions(node, indexer, wallet):
   
-  # Cancel all orders
-  client.private.cancel_all_orders()
+  # Cancel all orders, Ralph Grewe: Using the V4 API function defined above
+  await cancel_all_orders(node, indexer, wallet)
 
   # Protect API
   time.sleep(0.5)
 
   # Get markets for reference of tick size
-  markets = client.public.get_markets().data
+  markets = await indexer.markets.get_perpetual_markets()
 
   # Protect API
   time.sleep(0.5)
 
   # Get all open positions
-  positions = client.private.get_positions(status="OPEN")
-  all_positions = positions.data["positions"]
+  all_positions = get_open_positions(indexer)
 
   # Handle open positions
   close_orders = []
@@ -95,19 +131,22 @@ def abort_all_positions(client):
       market = position["market"]
 
       # Determine Side
-      side = "BUY"
-      if position["side"] == "LONG":
-        side = "SELL"
+      if position['side'] == 'LONG':
+          side = Order.Side.SIDE_SELL
+      else:
+          side = Order.Side.SIDE_BUY        
 
       # Get Price
       price = float(position["entryPrice"])
-      accept_price = price * 1.7 if side == "BUY" else price * 0.3
+      accept_price = price * 1.7 if side == Order.Side.SIDE_BUY else price * 0.3
       tick_size = markets["markets"][market]["tickSize"]
       accept_price = format_number(accept_price, tick_size)
 
       # Place order to close
       order = place_market_order(
-        client,
+        indexer,
+        node,
+        wallet,
         market,
         side,
         position["sumOpen"],
