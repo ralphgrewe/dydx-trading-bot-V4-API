@@ -50,7 +50,6 @@ async def place_market_order(indexer, node, wallet, market_id, side, size, price
     )
 
     good_til_block = await node.latest_block_height() + 10
-    print(good_til_block)
     new_order = market.order(
         order_id = order_id,
         order_type = OrderType.MARKET,
@@ -81,26 +80,41 @@ async def cancel_all_orders(node, indexer, wallet):
       if order['status'] == "OPEN":
           open_orders.append(order)
   
-  print("Orders for Address: " + DYDX_ADDRESS)
-  pprint(open_orders)
   good_til_block = await node.latest_block_height()
-  
   for order in open_orders:
       cancel = await node.cancel_order(wallet, order['id'], good_til_block=good_til_block + 10)
       print(cancel)
 
 # Ralph Grewe: Get open (perpetual) positions
 async def get_open_positions(indexer):
-  orders_response = await indexer.account.get_subaccount_orders(DYDX_ADDRESS, 0)
-  orders = orders_response
+  open_positions = []
 
-  open_orders = []
-  for order in orders:
-      if order['status'] == "OPEN":
-          open_orders.append(order)
+  try:
+      response = await indexer.account.get_subaccounts(DYDX_ADDRESS)
+      subaccounts = response["subaccounts"]
+      if subaccounts is None:
+          print("Subaccounts is None")
+      else:
+          for subaccount in subaccounts:
+              subaccount_number = subaccount["subaccountNumber"]
+              response = await indexer.account.get_subaccount(DYDX_ADDRESS, subaccount_number)
+              subaccount = response["subaccount"]
+
+              response = await indexer.account.get_subaccount_perpetual_positions(DYDX_ADDRESS, subaccount_number)
+              if response is None:
+                  print("Perpetual Positions Response is None")
+              else:
+                  positions = response["positions"]
+                  if positions is None:
+                      print("Perpetual Positions is None")
+                  for position in positions:
+                      if position["status"] != 'CLOSED':
+                          open_positions.append(position)
+  except Exception as e:
+      print(f"Error getting open positions: {e}")
+      exit(1)
   
-  print("Orders for Address: " + DYDX_ADDRESS)
-  pprint(open_orders)
+  return open_positions
 
 # Abort all open positions
 async def abort_all_positions(node, indexer, wallet):
@@ -118,7 +132,7 @@ async def abort_all_positions(node, indexer, wallet):
   time.sleep(0.5)
 
   # Get all open positions
-  all_positions = get_open_positions(indexer)
+  all_positions = await get_open_positions(indexer)
 
   # Handle open positions
   close_orders = []
@@ -140,19 +154,21 @@ async def abort_all_positions(node, indexer, wallet):
       price = float(position["entryPrice"])
       accept_price = price * 1.7 if side == Order.Side.SIDE_BUY else price * 0.3
       tick_size = markets["markets"][market]["tickSize"]
-      accept_price = format_number(accept_price, tick_size)
+      accept_price = float(format_number(accept_price, tick_size))
 
       # Place order to close
-      order = place_market_order(
+      print("Placing Order")
+      order = await place_market_order(
         indexer,
         node,
         wallet,
         market,
         side,
-        position["sumOpen"],
+        float(position["sumOpen"]),
         accept_price,
         True
       )
+      print("Order placed")
 
       # Append the result
       close_orders.append(order)
