@@ -26,3 +26,7 @@ conda activate dydx
 conda install numpy matplotlib statsmodels
 pip install python-decouple dydx-v4-client requests
 ```
+# Links
+Some more links which may be helpfull:
+* DYDX V4 Clients Github: https://github.com/dydxprotocol/v4-clients
+* DYDX V4 Technical Architecture: https://dydx.exchange/blog/v4-technical-architecture-overview

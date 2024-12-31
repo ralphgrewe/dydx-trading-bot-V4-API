@@ -9,10 +9,9 @@ from pprint import pprint
 from constants import DYDX_ADDRESS
 from dydx_v4_client.node.market import Market
 from dydx_v4_client import MAX_CLIENT_ID, OrderFlags
-from v4_proto.dydxprotocol.clob.order_pb2 import Order
+from v4_proto.dydxprotocol.clob.order_pb2 import Order, OrderId
 from dydx_v4_client.indexer.rest.constants import OrderType
 import random
-
 
 # Get existing open positions
 def is_open_positions(client, market):
@@ -69,21 +68,31 @@ async def place_market_order(indexer, node, wallet, market_id, side, size, price
 
     return transaction
 
-# Ralph Grewe: Additional function to cancel all orders
-# Abort all open positions
-async def cancel_all_orders(node, indexer, wallet):
-  orders_response = await indexer.account.get_subaccount_orders(DYDX_ADDRESS, 0)
-  orders = orders_response
+# Ralph Grewe: OrderId is given back a string
+# Trying to reconstruc the OrderId required for cancelling - no idea if it's working...
+async def order_id_from_json(indexer, order_id_string):
+  order = await indexer.account.get_order(order_id_string)
+  markets = await indexer.markets.get_perpetual_markets(order['ticker'])
+  market = Market(markets["markets"][order['ticker']])  
+  order_id = market.order_id(DYDX_ADDRESS, 0, int(order['clientId']), int(order['orderFlags']))
 
-  open_orders = []
-  for order in orders:
-      if order['status'] == "OPEN":
-          open_orders.append(order)
-  
+  return order, order_id
+
+# Abort all open positions
+# Ralph Grewe: Additional function to cancel all orders
+async def cancel_all_orders(node, indexer, wallet):
+  # Ralph Grewe: Only using subaccount 0 - should be extended to all subaccounts like for positions.
+  open_orders = await indexer.account.get_subaccount_orders(DYDX_ADDRESS, 0, status="OPEN")
   good_til_block = await node.latest_block_height()
   for order in open_orders:
-      cancel = await node.cancel_order(wallet, order['id'], good_til_block=good_til_block + 10)
-      print(cancel)
+      order, order_id = await order_id_from_json(indexer, order['id'])
+      if int(order['orderFlags']) == OrderFlags.LONG_TERM:
+        blockTime = datetime.fromisoformat(order['goodTilBlockTime'])
+        cancel = await node.cancel_order(wallet, order_id, good_til_block_time=int(blockTime.timestamp()))
+      else:
+        good_til_block = int(order['goodTilBlock'])
+        cancel = await node.cancel_order(wallet, order_id, good_til_block=good_til_block)
+      pprint(cancel)
 
 # Ralph Grewe: Get open (perpetual) positions
 async def get_open_positions(indexer):
@@ -100,7 +109,7 @@ async def get_open_positions(indexer):
               response = await indexer.account.get_subaccount(DYDX_ADDRESS, subaccount_number)
               subaccount = response["subaccount"]
 
-              response = await indexer.account.get_subaccount_perpetual_positions(DYDX_ADDRESS, subaccount_number)
+              response = await indexer.account.get_subaccount_perpetual_positions(DYDX_ADDRESS, subaccount_number, status='OPEN')
               if response is None:
                   print("Perpetual Positions Response is None")
               else:
@@ -108,8 +117,8 @@ async def get_open_positions(indexer):
                   if positions is None:
                       print("Perpetual Positions is None")
                   for position in positions:
-                      if position["status"] != 'CLOSED':
-                          open_positions.append(position)
+                      open_positions.append(position)
+
   except Exception as e:
       print(f"Error getting open positions: {e}")
       exit(1)
@@ -119,7 +128,10 @@ async def get_open_positions(indexer):
 # Abort all open positions
 async def abort_all_positions(node, indexer, wallet):
   
-  # Cancel all orders, Ralph Grewe: Using the V4 API function defined above
+  # Cancel all orders
+  # Ralph Grewe: Using the V4 API function defined above
+  # Ralph Grewe: Not sure if this makes a lot of sense as the trading bot uses "Market" orders (OrderTyp.MARKET)
+  # Ralph Grewe: which only exist for a few blocks (<20 max). 
   await cancel_all_orders(node, indexer, wallet)
 
   # Protect API
