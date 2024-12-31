@@ -15,7 +15,8 @@ After opening the (testnet) exchange (dydx.exchange, Products-Testnet), on the t
 A word of caution: I stored my address/mnemonic in an insecure/unencrypted file here just for using the testnet during development. This is acceptable for experimenting and developing on an account holding only testnet ETH and no real value. I would would never recommend to store the mnemonic (private key) unencrypted for a "production" system where you have real value stored. Familiarize yourself with the concept of asymmetric encryption and the secure use and storage of the private key for Ethereum and extend the system accordingly before you start using real assets.
 
 # Setting up the python environment
-On Windows I was using Anaconda. There, some packages seem to be best installed using conda:
-    conda install python-decouple numpy matplotlib statsmodels
-The remaining packages can be installed using pip:
+On Windows I was using Anaconda. There, some packages (numpy, matplotlib, statsmodels) seem to be best installed using conda. The remaining packages (python-decouple, dydx-v4-client requests) can be installed using pip. Also, I would recommend creating a virtual environment:
+    conda create -n dydx python=3.12
+    conda activate dydx
+    conda install numpy matplotlib statsmodels
     pip install python-decouple dydx-v4-client requests
