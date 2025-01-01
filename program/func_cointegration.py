@@ -3,6 +3,7 @@ import numpy as np
 import statsmodels.api as sm
 from statsmodels.tsa.stattools import coint
 from constants import MAX_HALF_LIFE, WINDOW
+from pprint import pprint
 
 # Calculate Half Life
 # https://www.pythonforfinance.net/2016/05/09/python-backtesting-mean-reversion-part-2/
@@ -16,7 +17,12 @@ def calculate_half_life(spread):
   spread_lag2 = sm.add_constant(spread_lag)
   model = sm.OLS(spread_ret, spread_lag2)
   res = model.fit()
-  halflife = round(-np.log(2) / res.params.iloc[1], 0)
+  try:
+    halflife = round(-np.log(2) / res.params.iloc[1], 0)
+  except Exception as e:
+    print(f"Error computing halflife {halflife}: {e}")
+    pprint(res)
+    
   return halflife
 
 

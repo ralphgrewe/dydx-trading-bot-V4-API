@@ -1,6 +1,7 @@
 import dydx_v4_client.network as network
 from decouple import config
 import asyncio
+from dydx_v4_client.indexer.candles_resolution import CandlesResolution
 
 # !!!! SELECT MODE !!!!
 MODE = "DEVELOPMENT"
@@ -9,16 +10,16 @@ MODE = "DEVELOPMENT"
 ABORT_ALL_POSITIONS = True
 
 # Find Cointegrated Pairs
-FIND_COINTEGRATED = True
+FIND_COINTEGRATED = False
 
 # Manage Exits
 MANAGE_EXITS = False
 
 # Place Trades
-PLACE_TRADES = False
+PLACE_TRADES = True
 
 # Resolution
-RESOLUTION = "1HOUR"
+RESOLUTION = CandlesResolution.ONE_HOUR.value
 
 # Stats Window
 WINDOW = 21
@@ -26,8 +27,8 @@ WINDOW = 21
 # Thresholds - Opening
 MAX_HALF_LIFE = 24
 ZSCORE_THRESH = 1.5
-USD_PER_TRADE = 100
-USD_MIN_COLLATERAL = 1880
+USD_PER_TRADE = 25
+USD_MIN_COLLATERAL = 10
 
 # Thresholds - Closing
 CLOSE_AT_ZSCORE_CROSS = True

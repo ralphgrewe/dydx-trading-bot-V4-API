@@ -1,9 +1,12 @@
-from func_private import place_market_order, check_order_status
+from func_private import place_market_order, cancel_order
 from datetime import datetime, timedelta
 import time
 
 from pprint import pprint
 
+# Ralph Grewe: Additional Imports
+from google.protobuf.json_format import MessageToJson
+from constants import DYDX_ADDRESS
 
 # Class: Agent for managing opening and checking trades
 class BotAgent:
@@ -15,7 +18,9 @@ class BotAgent:
   # Initialize class
   def __init__(
     self,
-    client,
+    node,
+    indexer,
+    wallet,
     market_1,
     market_2,
     base_side,
@@ -31,7 +36,9 @@ class BotAgent:
   ):
 
     # Initialize class variables
-    self.client = client
+    self.node = node
+    self.indexer = indexer
+    self.wallet = wallet
     self.market_1 = market_1
     self.market_2 = market_2
     self.base_side = base_side
@@ -66,13 +73,25 @@ class BotAgent:
     }
 
   # Check order status by id
-  def check_order_status_by_id(self, order_id):
+  async def check_order_status_by_id(self, order_id):
 
     # Allow time to process
     time.sleep(2)
 
-    # Check order status
-    order_status = check_order_status(self.client, order_id)
+    # Ralph Grewe: It's a bit more difficult here because we only have the order_id object and not the string,
+    # which usally is used by get_order(). We have to find the right order by the client ID.
+    # Furthermore, I assume that failed orders never show up - so if we don't find an order with the client ID, we assume it's faild
+    order_status = "FAILED"
+    try:
+      orders = await self.indexer.account.get_subaccount_orders(DYDX_ADDRESS, 0)
+      for order in orders:
+        if order["clientId"] == order_id.client_id:
+          # Ralph Grewe: Further checks should be added to verify it's the order we are looking for. It's not guaranteed that clientID is only used once.
+          pprint(order)
+          order_status = order["status"]
+    except Exception as e:
+        print(f"Exception when retrieving order status: {e}")
+        order_status = "FAILED"    
 
     # Guard: If order cancelled move onto next Pair
     if order_status == "CANCELED":
@@ -83,7 +102,7 @@ class BotAgent:
     # Guard: If order not filled wait until order expiration
     if order_status != "FAILED":
       time.sleep(15)
-      order_status = check_order_status(self.client, order_id)
+      order_status = check_order_status(self.indexer, order_id)
 
       # Guard: If order cancelled move onto next Pair
       if order_status == "CANCELED":
@@ -93,7 +112,7 @@ class BotAgent:
 
       # Guard: If not filled, cancel order
       if order_status != "FILLED":
-        self.client.private.cancel_order(order_id=order_id)
+        cancel_order(self.node, self.indexer, order_id)
         self.order_dict["pair_status"] = "ERROR"
         print(f"{self.market_1} vs {self.market_2} - Order error...")
         return "error"
@@ -102,7 +121,7 @@ class BotAgent:
     return "live"
 
   # Open trades
-  def open_trades(self):
+  async def open_trades(self):
 
     # Print status
     print("---")
@@ -112,25 +131,29 @@ class BotAgent:
 
     # Place Base Order
     try:
-      base_order = place_market_order(
-        self.client,
-        market=self.market_1,
-        side=self.base_side,
-        size=self.base_size,
-        price=self.base_price,
-        reduce_only=False
+      # Ralph Grewe: We don't simply get the order_id back from DYDX V4 - get the order ID object 
+      base_order, order_id = await place_market_order(
+        self.node,
+        self.indexer,
+        self.wallet,
+        self.market_1,
+        self.base_side,
+        self.base_size,
+        self.base_price,
+        False
       )
 
       # Store the order id
-      self.order_dict["order_id_m1"] = base_order["order"]["id"]
+      self.order_dict["order_id_m1"] = order_id
       self.order_dict["order_time_m1"] = datetime.now().isoformat()
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
       self.order_dict["comments"] = f"Market 1 {self.market_1}: , {e}"
+      print(f"Error placing order for {self.market_1}: {e}")
       return self.order_dict
 
     # Ensure order is live before processing
-    order_status_m1 = self.check_order_status_by_id(self.order_dict["order_id_m1"])
+    order_status_m1 = await self.check_order_status_by_id(self.order_dict["order_id_m1"])
 
     # Guard: Aborder if order failed
     if order_status_m1 != "live":
@@ -146,9 +169,11 @@ class BotAgent:
 
     # Place Quote Order
     try:
-      quote_order = place_market_order(
-        self.client,
-        market=self.market_2,
+      quote_order, order_id = await place_market_order(
+        self.node,
+        self.indexer,
+        self.wallet,
+        market_id=self.market_2,
         side=self.quote_side,
         size=self.quote_size,
         price=self.quote_price,
@@ -156,15 +181,16 @@ class BotAgent:
       )
 
       # Store the order id
-      self.order_dict["order_id_m2"] = quote_order["order"]["id"]
+      self.order_dict["order_id_m2"] = order_id
       self.order_dict["order_time_m2"] = datetime.now().isoformat()
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
       self.order_dict["comments"] = f"Market 2 {self.market_2}: , {e}"
+      print(f"Error placing order for {self.market_1}: {e}")
       return self.order_dict
 
     # Ensure order is live before processing
-    order_status_m2 = self.check_order_status_by_id(self.order_dict["order_id_m2"])
+    order_status_m2 = await self.check_order_status_by_id(self.order_dict["order_id_m2"])
 
     # Guard: Aborder if order failed
     if order_status_m2 != "live":
@@ -173,9 +199,11 @@ class BotAgent:
 
       # Close order 1:
       try:
-        close_order = place_market_order(
-          self.client,
-          market=self.market_1,
+        close_order = await place_market_order(
+          self.node,
+          self.indexer,
+          self.wallet,
+          market_id=self.market_1,
           side=self.quote_side,
           size=self.base_size,
           price=self.accept_failsafe_base_price,
@@ -184,7 +212,7 @@ class BotAgent:
 
         # Ensure order is live before proceeding
         time.sleep(2)
-        order_status_close_order = check_order_status(self.client, close_order["order"]["id"])
+        order_status_close_order = await check_order_status(self.client, close_order["order"]["id"])
         if order_status_close_order != "FILLED":
           print("ABORT PROGRAM")
           print("Unexpected Error")

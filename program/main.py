@@ -52,9 +52,7 @@ async def main():
       exit(1)
 
   # Run as always on
-  #while True:
-  # Ralph Grewe: Don't run until it's fixed for V4 API
-  while False:
+  while True:
 
     # Place trades for opening positions
     if MANAGE_EXITS:
@@ -69,7 +67,7 @@ async def main():
     if PLACE_TRADES:
       try:
         print("Finding trading opportunities...")
-        open_positions(client)
+        await open_positions(node, indexer, wallet)
       except Exception as e:
         print("Error trading pairs: ", e)
         exit(1)

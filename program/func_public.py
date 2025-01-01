@@ -7,14 +7,13 @@ import time
 from pprint import pprint
 
 # Ralph Grewe Additional imports for V4 API
-from dydx_v4_client.indexer.candles_resolution import CandlesResolution
 
 # Get relevant time periods for ISO from and to
 ISO_TIMES = get_ISO_times()
 
 
 # Get Candles recent
-def get_candles_recent(client, market):
+async def get_candles_recent(indexer, market):
 
   # Define output
   close_prices = []
@@ -23,19 +22,18 @@ def get_candles_recent(client, market):
   time.sleep(0.2)
 
   # Get data
-  candles = client.public.get_candles(
-    market= market,
-    resolution=RESOLUTION,
-    limit=100
-  )
-
-  # Structure data
-  for candle in candles.data["candles"]:
-    close_prices.append(candle["close"])
+  try:
+      response = await indexer.markets.get_perpetual_market_candles(market=market,
+                                                                    resolution=RESOLUTION,
+                                                                    limit = 100)
+      for candle in response["candles"]:
+          close_prices.append(candle["close"])
+  except Exception as e:
+      print(F"Error getting recent candles for market: {market}:,  {e}")  
 
   # Construct and return close price series
   close_prices.reverse()
-  prices_result = np.array(close_prices).astype(np.float)
+  prices_result = np.array(close_prices).astype(np.float32)
   return prices_result
 
 
@@ -59,14 +57,14 @@ async def get_candles_historical(indexer, market):
     # Ralph Grewe: in the "try"- Block, get candles using V4 API
     try:
         response = await indexer.markets.get_perpetual_market_candles(market=market,
-                                                                      resolution=CandlesResolution.ONE_HOUR.value,
+                                                                      resolution=RESOLUTION,
                                                                       from_iso = from_iso,
                                                                       to_iso = to_iso,
                                                                       limit = 100)
         for candle in response["candles"]:
             close_prices.append({"datetime": candle["startedAt"], market: candle["close"]})
     except Exception as e:
-        print("Error getting candles: ", e)    
+        print(f"Error getting historical candles: {e}")    
 
   # Construct and return DataFrame
   close_prices.reverse()
@@ -96,7 +94,7 @@ async def construct_market_prices(indexer):
 
   # Append other prices to DataFrame
   # You can limit the amount to loop though here to save time in development
-  for market in tradeable_markets[1:5]:
+  for market in tradeable_markets[1:]:
     # Ralph Grewe: To see some progress when fetching many markets
     print(f"Fetching market: {market}")
     close_prices_add = await get_candles_historical(indexer, market)

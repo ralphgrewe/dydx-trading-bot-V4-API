@@ -1,4 +1,4 @@
-from constants import ZSCORE_THRESH, USD_PER_TRADE, USD_MIN_COLLATERAL
+from constants import ZSCORE_THRESH, USD_PER_TRADE, USD_MIN_COLLATERAL, DYDX_ADDRESS
 from func_utils import format_number
 from func_public import get_candles_recent
 from func_cointegration import calculate_zscore
@@ -7,11 +7,13 @@ from func_bot_agent import BotAgent
 import pandas as pd
 import json
 
+# Ralph Grewe: Additional Imports
 from pprint import pprint
-
+import time
+from v4_proto.dydxprotocol.clob.order_pb2 import Order
 
 # Open positions
-def open_positions(client):
+async def open_positions(node, indexer, wallet):
 
   """
     Manage finding triggers for trade entry
@@ -22,7 +24,8 @@ def open_positions(client):
   df = pd.read_csv("cointegrated_pairs.csv")
 
   # Get markets from referencing of min order size, tick size etc
-  markets = client.public.get_markets().data
+  # Ralph Grewe: Get Markets using V4 API. Data structure also slightly changed
+  markets = await indexer.markets.get_perpetual_markets()
 
   # Initialize container for BotAgent results
   bot_agents = []
@@ -42,31 +45,34 @@ def open_positions(client):
     # Extract variables
     base_market = row["base_market"]
     quote_market = row["quote_market"]
-    hedge_ratio = row["hedge_ratio"]
-    half_life = row["half_life"]
+    hedge_ratio = float(row["hedge_ratio"])
+    half_life = float(row["half_life"])
 
     # Get prices
-    series_1 = get_candles_recent(client, base_market)
-    series_2 = get_candles_recent(client, quote_market)
+    time.sleep(1)
+    series_1 = await get_candles_recent(indexer, base_market)
+    series_2 = await get_candles_recent(indexer, quote_market)
 
     # Get ZScore
     if len(series_1) > 0 and len(series_1) == len(series_2):
       spread = series_1 - (hedge_ratio * series_2)
       z_score = calculate_zscore(spread).values.tolist()[-1]
 
+      print(f"Base market: {base_market}, quote market: {quote_market}, z_score: {z_score}")
+
       # Establish if potential trade
       if abs(z_score) >= ZSCORE_THRESH:
 
         # Ensure like-for-like not already open (diversify trading)
-        is_base_open = is_open_positions(client, base_market)
-        is_quote_open = is_open_positions(client, quote_market)
+        is_base_open = await is_open_positions(indexer, base_market)
+        is_quote_open = await is_open_positions(indexer, quote_market)
 
         # Place trade
         if not is_base_open and not is_quote_open:
 
           # Determine side
-          base_side = "BUY" if z_score < 0 else "SELL"
-          quote_side = "BUY" if z_score > 0 else "SELL"
+          base_side = Order.SIDE_BUY if z_score < 0 else Order.SIDE_SELL
+          quote_side = Order.SIDE_BUY if z_score > 0 else Order.SIDE_SELL
 
           # Get acceptable price in string format with correct number of decimals
           base_price = series_1[-1]
@@ -78,32 +84,30 @@ def open_positions(client):
           quote_tick_size = markets["markets"][quote_market]["tickSize"]
 
           # Format prices
-          accept_base_price = format_number(accept_base_price, base_tick_size)
-          accept_quote_price = format_number(accept_quote_price, quote_tick_size)
-          accept_failsafe_base_price = format_number(failsafe_base_price, base_tick_size)
+          accept_base_price = float(format_number(accept_base_price, base_tick_size))
+          accept_quote_price = float(format_number(accept_quote_price, quote_tick_size))
+          accept_failsafe_base_price = float(format_number(failsafe_base_price, base_tick_size))
 
           # Get size
           base_quantity = 1 / base_price * USD_PER_TRADE
           quote_quantity = 1 / quote_price * USD_PER_TRADE
-          base_step_size = markets["markets"][base_market]["stepSize"]
-          quote_step_size = markets["markets"][quote_market]["stepSize"]
+          base_step_size = float(markets["markets"][base_market]["stepSize"])
+          quote_step_size = float(markets["markets"][quote_market]["stepSize"])
 
           # Format sizes
-          base_size = format_number(base_quantity, base_step_size)
-          quote_size = format_number(quote_quantity, quote_step_size)
+          base_size = float(format_number(base_quantity, base_step_size))
+          quote_size = float(format_number(quote_quantity, quote_step_size))
 
           # Ensure size
-          base_min_order_size = markets["markets"][base_market]["minOrderSize"]
-          quote_min_order_size = markets["markets"][quote_market]["minOrderSize"]
-          check_base = float(base_quantity) > float(base_min_order_size)
-          check_quote = float(quote_quantity) > float(quote_min_order_size)
+          check_base = float(base_quantity) > float(base_step_size)
+          check_quote = float(quote_quantity) > float(quote_step_size)
 
           # If checks pass, place trades
           if check_base and check_quote:
 
-            # Check account balance
-            account = client.private.get_account()
-            free_collateral = float(account.data["account"]["freeCollateral"])
+            # Check account balance, Ralph Grewe: Using V4 API
+            account_response = await indexer.account.get_subaccounts(DYDX_ADDRESS)
+            free_collateral = float(account_response["subaccounts"][0]["freeCollateral"])
             print(f"Balance: {free_collateral} and minimum at {USD_MIN_COLLATERAL}")
 
             # Guard: Ensure collateral
@@ -112,7 +116,9 @@ def open_positions(client):
 
             # Create Bot Agent
             bot_agent = BotAgent(
-              client,
+              node,
+              indexer,
+              wallet,
               market_1=base_market,
               market_2=quote_market,
               base_side=base_side,
@@ -128,7 +134,7 @@ def open_positions(client):
             )
 
             # Open Trades
-            bot_open_dict = bot_agent.open_trades()
+            bot_open_dict = await bot_agent.open_trades()
 
             # Guard: Handle failure
             if bot_open_dict == "failed":
