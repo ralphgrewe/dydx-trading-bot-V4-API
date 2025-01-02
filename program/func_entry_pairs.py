@@ -141,6 +141,7 @@ async def open_positions(node, indexer, wallet):
               continue
 
             # Handle success in opening trades
+            print(f"bot_open_dict: {bot_open_dict}")
             if bot_open_dict["pair_status"] == "LIVE":
 
               # Append to list of bot agents

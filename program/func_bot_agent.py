@@ -214,6 +214,8 @@ class BotAgent:
 
           # ABORT
           exit(1)
+        else:
+          return self.order_dict
       except Exception as e:
         self.order_dict["pair_status"] = "ERROR"
         self.order_dict["comments"] = f"Close Market 1 {self.market_1}: , {e}"
