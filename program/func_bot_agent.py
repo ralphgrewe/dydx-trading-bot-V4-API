@@ -193,7 +193,7 @@ class BotAgent:
 
       # Close order 1:
       try:
-        close_order = await place_market_order(
+        close_order, order_id = await place_market_order(
           self.node,
           self.indexer,
           self.wallet,
@@ -206,7 +206,7 @@ class BotAgent:
 
         # Ensure order is live before proceeding
         time.sleep(2)
-        order_status_close_order = await check_order_status(self.client, close_order["order"]["id"])
+        order_status_close_order = await check_order_status(self.indexer, order_id)
         if order_status_close_order != "FILLED":
           print("ABORT PROGRAM")
           print("Unexpected Error")
