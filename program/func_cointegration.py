@@ -38,21 +38,25 @@ def calculate_zscore(spread):
 
 # Calculate Cointegration
 def calculate_cointegration(series_1, series_2):
-  series_1 = np.array(series_1).astype(np.float32) # Pandas doesn't have "float" datatype any longer. "float32" should be sufficient precise for price data.
-  series_2 = np.array(series_2).astype(np.float32)
-  coint_flag = 0
-  coint_res = coint(series_1, series_2)
-  coint_t = coint_res[0]
-  p_value = coint_res[1]
-  critical_value = coint_res[2][1]
-  model = sm.OLS(series_1, series_2).fit()
-  hedge_ratio = model.params[0]
-  spread = series_1 - (hedge_ratio * series_2)
-  half_life = calculate_half_life(spread)
-  t_check = coint_t < critical_value
-  coint_flag = 1 if p_value < 0.05 and t_check else 0
-  return coint_flag, hedge_ratio, half_life
-
+  try:
+    series_1 = np.array(series_1).astype(np.float32) # Pandas doesn't have "float" datatype any longer. "float32" should be sufficient precise for price data.
+    series_2 = np.array(series_2).astype(np.float32)
+    coint_flag = 0
+    coint_res = coint(series_1, series_2)
+    coint_t = coint_res[0]
+    p_value = coint_res[1]
+    critical_value = coint_res[2][1]
+    model = sm.OLS(series_1, series_2).fit()
+    hedge_ratio = model.params[0]
+    spread = series_1 - (hedge_ratio * series_2)
+    half_life = calculate_half_life(spread)
+    t_check = coint_t < critical_value
+    coint_flag = 1 if p_value < 0.05 and t_check else 0
+    return coint_flag, hedge_ratio, half_life
+  except Exception as e:
+    # Ralph Grewe: Sometimes something goes wrong - better skip one coint instead of crashing whole script
+    print(f"calculate cointegration failed: {e}")
+    return 0, 0, -1
 
 # Store Cointegration Results
 def store_cointegration_results(df_market_prices):

@@ -1,4 +1,4 @@
-from func_private import place_market_order, cancel_order
+from func_private import place_market_order, cancel_order, check_order_status
 from datetime import datetime, timedelta
 import time
 
@@ -6,7 +6,6 @@ from pprint import pprint
 
 # Ralph Grewe: Additional Imports
 from google.protobuf.json_format import MessageToJson
-from constants import DYDX_ADDRESS
 
 # Class: Agent for managing opening and checking trades
 class BotAgent:
@@ -81,28 +80,23 @@ class BotAgent:
     # Ralph Grewe: It's a bit more difficult here because we only have the order_id object and not the string,
     # which usally is used by get_order(). We have to find the right order by the client ID.
     # Furthermore, I assume that failed orders never show up - so if we don't find an order with the client ID, we assume it's faild
-    order_status = "FAILED"
-    try:
-      orders = await self.indexer.account.get_subaccount_orders(DYDX_ADDRESS, 0)
-      for order in orders:
-        if order["clientId"] == order_id.client_id:
-          # Ralph Grewe: Further checks should be added to verify it's the order we are looking for. It's not guaranteed that clientID is only used once.
-          pprint(order)
-          order_status = order["status"]
-    except Exception as e:
-        print(f"Exception when retrieving order status: {e}")
-        order_status = "FAILED"    
+    order_status = await check_order_status(self.indexer, order_id)
 
     # Guard: If order cancelled move onto next Pair
     if order_status == "CANCELED":
       print(f"{self.market_1} vs {self.market_2} - Order cancelled...")
       self.order_dict["pair_status"] = "FAILED"
       return "failed"
-
+    
+    # Ralph Grewe: Looks as if this was missing - or a "FAILED" status would lead to a "live" order
+    if order_status == "FAILED":
+      print(f"{self.market_1} vs {self.market_2} - Order failed...")
+      self.order_dict["pair_status"] = "FAILED"
+      return "failed"
     # Guard: If order not filled wait until order expiration
-    if order_status != "FAILED":
+    else:
       time.sleep(15)
-      order_status = check_order_status(self.indexer, order_id)
+      order_status = await check_order_status(self.indexer, order_id)
 
       # Guard: If order cancelled move onto next Pair
       if order_status == "CANCELED":
