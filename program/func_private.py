@@ -210,9 +210,8 @@ async def check_order_status(indexer, order_id):
     try:
       orders = await indexer.account.get_subaccount_orders(DYDX_ADDRESS, 0)
       for order in orders:
-        if order["clientId"] == order_id.client_id:
+        if int(order["clientId"]) == int(order_id.client_id):
           # Ralph Grewe: Further checks should be added to verify it's the order we are looking for. It's not guaranteed that clientID is only used once.
-          pprint(order)
           order_status = order["status"]
     except Exception as e:
         print(f"Exception when retrieving order status: {e}")
