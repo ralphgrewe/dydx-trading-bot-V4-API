@@ -3,7 +3,7 @@ from func_utils import format_number
 import time
 import json
 
-from pprint import pprint
+from pprint import pformat
 
 #Ralph Grewe: Additional Imports
 from constants import DYDX_ADDRESS
@@ -12,6 +12,8 @@ from dydx_v4_client import MAX_CLIENT_ID, OrderFlags
 from v4_proto.dydxprotocol.clob.order_pb2 import Order, OrderId
 from dydx_v4_client.indexer.rest.constants import OrderType
 import random
+import logging
+logger = logging.getLogger('BotLogger')
 
 # Get existing open positions
 async def is_open_positions(indexer, market):
@@ -25,7 +27,7 @@ async def is_open_positions(indexer, market):
       response = await indexer.account.get_subaccounts(DYDX_ADDRESS)
       subaccounts = response["subaccounts"]
       if subaccounts is None:
-          print("Subaccounts is None")
+          logger.info("Subaccounts is None")
       else:
           for subaccount in subaccounts:
               subaccount_number = subaccount["subaccountNumber"]
@@ -34,16 +36,18 @@ async def is_open_positions(indexer, market):
 
               response = await indexer.account.get_subaccount_perpetual_positions(DYDX_ADDRESS, subaccount_number, status='OPEN')
               if response is None:
-                  print("Perpetual Positions Response is None")
+                  logger.info("Perpetual Positions Response is None")
               else:
                   positions = response["positions"]
                   if positions is None:
-                      print("Perpetual Positions is None")
+                      logger.info("Perpetual Positions is None")
                   for position in positions:
                       if position['market'] == market:
-                        open_positions.append(position)  
+                        open_positions.append(position)
+      logger.debug("Open Positions:")
+      logger.debug(pformat(open_positions))
   except Exception as e:
-      print(f"Error in is_open_positions(), market {market}: {e}")
+      logger.error(f"Error in is_open_positions(), market {market}: {e}")
       exit(1)
 
   # Determine if open
@@ -71,12 +75,16 @@ async def place_market_order(node, indexer, wallet, market_id, side, size, price
         reduce_only = reduce_only,
         good_til_block = good_til_block
     )
+    logger.debug("Placed new order:")
+    logger.debug(pformat(new_order))
 
     transaction = await node.place_order(
         wallet=wallet,
         order=new_order,
     )
     wallet.sequence += 1
+    logger.debug("Order result:")
+    logger.debug(pformat(transaction))
 
     return transaction, order_id
 
@@ -91,11 +99,13 @@ async def cancel_order(node, indexer, wallet, order_id_string):
   if int(order['orderFlags']) == OrderFlags.LONG_TERM:
     blockTime = datetime.fromisoformat(order['goodTilBlockTime'])
     cancel = await node.cancel_order(wallet, order_id, good_til_block_time=int(blockTime.timestamp()))
+    logger.debug(pformat(f"Canceled Long Term Order: {order}"))
   else:
     good_til_block = int(order['goodTilBlock'])
     cancel = await node.cancel_order(wallet, order_id, good_til_block=good_til_block)
+    logger.debug(pformat(f"Canceled Short Term Order: {order}"))
 
-  pprint(cancel)  
+  logger.debug(pformat(f"Result: {cancel}"))  
   return cancel
 
 # Abort all open positions
@@ -114,7 +124,7 @@ async def get_open_positions(indexer):
       response = await indexer.account.get_subaccounts(DYDX_ADDRESS)
       subaccounts = response["subaccounts"]
       if subaccounts is None:
-          print("Subaccounts is None")
+          logger.info("Subaccounts is None")
       else:
           for subaccount in subaccounts:
               subaccount_number = subaccount["subaccountNumber"]
@@ -123,13 +133,14 @@ async def get_open_positions(indexer):
 
               response = await indexer.account.get_subaccount_perpetual_positions(DYDX_ADDRESS, subaccount_number, status='OPEN')
               if response is None:
-                  print("Perpetual Positions Response is None")
+                  logger.info("Perpetual Positions Response is None")
               else:
                   positions = response["positions"]
                   if positions is None:
-                      print("Perpetual Positions is None")
+                      logger.info("Perpetual Positions is None")
                   for position in positions:
                       open_positions.append(position)
+      logger.debug(pformat(f"Open Positions: {open_positions}"))
   except Exception as e:
       print(f"Error getting open positions: {e}")
       exit(1)

@@ -9,10 +9,13 @@ from constants import (
     DYDX_MNEMONIC
 )
 
+import logging
+logger = logging.getLogger('BotLogger')
+
 async def connect_dydx():
     node = await NodeClient.connect(HOST.node)
     indexer = IndexerClient(HOST.rest_indexer)
-    print("Connecting to: " + DYDX_ADDRESS)
+    logger.info("Connecting to: " + DYDX_ADDRESS)
     wallet = await Wallet.from_mnemonic(node, DYDX_MNEMONIC, DYDX_ADDRESS)
 
     return node, indexer, wallet

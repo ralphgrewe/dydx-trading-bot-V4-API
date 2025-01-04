@@ -3,7 +3,9 @@ import numpy as np
 import statsmodels.api as sm
 from statsmodels.tsa.stattools import coint
 from constants import MAX_HALF_LIFE, WINDOW
-from pprint import pprint
+from pprint import pformat
+import logging
+logger = logging.getLogger('BotLogger')
 
 # Calculate Half Life
 # https://www.pythonforfinance.net/2016/05/09/python-backtesting-mean-reversion-part-2/
@@ -20,8 +22,8 @@ def calculate_half_life(spread):
   try:
     halflife = round(-np.log(2) / res.params.iloc[1], 0)
   except Exception as e:
-    print(f"Error computing halflife {halflife}: {e}")
-    pprint(res)
+    logger.error(f"Error computing halflife {halflife}: {e}")
+    logger.debug(pformat(res))
     
   return halflife
 
@@ -55,7 +57,7 @@ def calculate_cointegration(series_1, series_2):
     return coint_flag, hedge_ratio, half_life
   except Exception as e:
     # Ralph Grewe: Sometimes something goes wrong - better skip one coint instead of crashing whole script
-    print(f"calculate cointegration failed: {e}")
+    logger.error(f"calculate cointegration failed: {e}")
     return 0, 0, -1
 
 # Store Cointegration Results
@@ -92,7 +94,7 @@ def store_cointegration_results(df_market_prices):
   del df_criteria_met
 
   # Return result
-  print("Cointegrated pairs successfully saved")
+  logger.info("Cointegrated pairs successfully saved")
   return "saved"
 
 

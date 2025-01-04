@@ -8,9 +8,11 @@ import pandas as pd
 import json
 
 # Ralph Grewe: Additional Imports
-from pprint import pprint
+from pprint import pformat
 import time
 from v4_proto.dydxprotocol.clob.order_pb2 import Order
+import logging
+logger = logging.getLogger('BotLogger')
 
 # Open positions
 async def open_positions(node, indexer, wallet):
@@ -58,7 +60,7 @@ async def open_positions(node, indexer, wallet):
       spread = series_1 - (hedge_ratio * series_2)
       z_score = calculate_zscore(spread).values.tolist()[-1]
 
-      print(f"Base market: {base_market}, quote market: {quote_market}, z_score: {z_score}")
+      logger.info(f"Base market: {base_market}, quote market: {quote_market}, z_score: {z_score}")
 
       # Establish if potential trade
       if abs(z_score) >= ZSCORE_THRESH:
@@ -108,7 +110,7 @@ async def open_positions(node, indexer, wallet):
             # Check account balance, Ralph Grewe: Using V4 API
             account_response = await indexer.account.get_subaccounts(DYDX_ADDRESS)
             free_collateral = float(account_response["subaccounts"][0]["freeCollateral"])
-            print(f"Balance: {free_collateral} and minimum at {USD_MIN_COLLATERAL}")
+            logger.info(f"Balance: {free_collateral} and minimum at {USD_MIN_COLLATERAL}")
 
             # Guard: Ensure collateral
             if free_collateral < USD_MIN_COLLATERAL:
@@ -141,7 +143,7 @@ async def open_positions(node, indexer, wallet):
               continue
 
             # Handle success in opening trades
-            print(f"bot_open_dict: {bot_open_dict}")
+            logger.info(f"bot_open_dict: {bot_open_dict}")
             if bot_open_dict["pair_status"] == "LIVE":
 
               # Append to list of bot agents
@@ -149,11 +151,11 @@ async def open_positions(node, indexer, wallet):
               del(bot_open_dict)
 
               # Confirm live status in print
-              print("Trade status: Live")
-              print("---")
+              logger.info("Trade status: Live")
+              logger.info("---")
 
   # Save agents
-  print(f"Success: Manage open trades checked")
+  logger.info(f"Success: Manage open trades checked")
   if len(bot_agents) > 0:
     with open("bot_agents.json", "w") as f:
       json.dump(bot_agents, f)

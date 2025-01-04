@@ -1,3 +1,4 @@
+import logging.handlers
 from constants import ABORT_ALL_POSITIONS, FIND_COINTEGRATED, PLACE_TRADES, MANAGE_EXITS
 from func_connections import connect_dydx
 from func_private import abort_all_positions
@@ -9,24 +10,39 @@ from func_exit_pairs import manage_trade_exits
 # MAIN FUNCTION
 # Ralph Grewe: we need to have a "async" function here which we then can call using asyncio.run()
 import asyncio
+import logging
+import sys
+
+logger = logging.getLogger('BotLogger')
 
 async def main():
   # Connect to client
+  logFile = logging.handlers.RotatingFileHandler("bot.log", mode='a', maxBytes=65535, backupCount=32786, encoding='utf-8', delay=False, errors=None)
+  logFile.setLevel(logging.DEBUG)
+  logFileFormatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s")
+  logFile.setFormatter(logFileFormatter)
+  logger.addHandler(logFile)
+  logConsole = logging.StreamHandler(sys.stdout)
+  logConsole.setLevel(logging.INFO)
+  logger.addHandler(logConsole)
+  logger.setLevel(logging.INFO)
+  logger.info("Bot Started")
+
   try:
-    print("Connecting to Client...")
+    logger.info("Connecting to Client...")
     # Ralph Grewe: We have to await because it's an async function
     node, indexer, wallet = await connect_dydx()
   except Exception as e:
-    print("Error connecting to client: ", e)
+    logger.error("Error connecting to client: {e}")
     exit(1)
 
   # Abort all open positions
   if ABORT_ALL_POSITIONS:
     try:
-      print("Closing all positions...")
+      logger.info("Closing all positions...")
       close_orders = await abort_all_positions(node, indexer, wallet)
     except Exception as e:
-      print("Error closing all positions: ", e)
+      logger.info("Error closing all positions: {e}")
       exit(1)
 
   # Find Cointegrated Pairs
@@ -34,21 +50,21 @@ async def main():
 
     # Construct Market Prices
     try:
-      print("Fetching market prices, please allow 3 mins...")
+      logger.info("\nFetching market prices, please allow 3 mins...")
       df_market_prices = await construct_market_prices(indexer)
     except Exception as e:
-      print("Error constructing market prices: ", e)
+      logger.error(f"Error constructing market prices: {e}")
       exit(1)
 
     # Store Cointegrated Pairs
     try:
-      print("Storing cointegrated pairs...")
+      logger.info("\nStoring cointegrated pairs...")
       stores_result = store_cointegration_results(df_market_prices)
       if stores_result != "saved":
-        print("Error saving cointegrated pairs")
+        logger.error("Error saving cointegrated pairs")
         exit(1)
     except Exception as e:
-      print("Error saving cointegrated pairs: ", e)
+      logger.error("Error saving cointegrated pairs: {e}")
       exit(1)
 
   # Run as always on
@@ -57,19 +73,19 @@ async def main():
     # Place trades for opening positions
     if MANAGE_EXITS:
       try:
-        print("Managing exits...")
+        logger.info("Managing exits...")
         manage_trade_exits(client)
       except Exception as e:
-        print("Error managing exiting positions: ", e)
+        logger.error("Error managing exiting positions: {e}")
         exit(1)
 
     # Place trades for opening positions
     if PLACE_TRADES:
       try:
-        print("Finding trading opportunities...")
+        logger.info("Finding trading opportunities...")
         await open_positions(node, indexer, wallet)
       except Exception as e:
-        print("Error trading pairs: ", e)
+        logger.error(f"Error trading pairs: {e}")
         exit(1)
 
 if __name__ == "__main__":

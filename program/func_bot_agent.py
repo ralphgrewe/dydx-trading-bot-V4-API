@@ -2,13 +2,16 @@ from func_private import place_market_order, cancel_order, check_order_status
 from datetime import datetime, timedelta
 import time
 
-from pprint import pprint
+from pprint import pformat
 
 # Ralph Grewe: Additional Imports
 from google.protobuf.json_format import MessageToJson
+import logging
+logger = logging.getLogger('BotLogger')
 
 # Class: Agent for managing opening and checking trades
 class BotAgent:
+  
 
   """
     Primary function of BotAgent handles opening and checking order status
@@ -84,13 +87,13 @@ class BotAgent:
 
     # Guard: If order cancelled move onto next Pair
     if order_status == "CANCELED":
-      print(f"{self.market_1} vs {self.market_2} - Order cancelled...")
+      logger.info(f"{self.market_1} vs {self.market_2} - Order cancelled...")
       self.order_dict["pair_status"] = "FAILED"
       return "failed"
     
     # Ralph Grewe: Looks as if this was missing - or a "FAILED" status would lead to a "live" order
     if order_status == "FAILED":
-      print(f"{self.market_1} vs {self.market_2} - Order failed...")
+      logger.info(f"{self.market_1} vs {self.market_2} - Order failed...")
       self.order_dict["pair_status"] = "FAILED"
       return "failed"
     # Guard: If order not filled wait until order expiration
@@ -100,7 +103,7 @@ class BotAgent:
 
       # Guard: If order cancelled move onto next Pair
       if order_status == "CANCELED":
-        print(f"{self.market_1} vs {self.market_2} - Order cancelled...")
+        logger.info(f"{self.market_1} vs {self.market_2} - Order cancelled...")
         self.order_dict["pair_status"] = "FAILED"
         return "failed"
 
@@ -108,7 +111,7 @@ class BotAgent:
       if order_status != "FILLED":
         cancel_order(self.node, self.indexer, order_id)
         self.order_dict["pair_status"] = "ERROR"
-        print(f"{self.market_1} vs {self.market_2} - Order error...")
+        logger.info(f"{self.market_1} vs {self.market_2} - Order error...")
         return "error"
 
     # Return live
@@ -118,10 +121,10 @@ class BotAgent:
   async def open_trades(self):
 
     # Print status
-    print("---")
-    print(f"{self.market_1}: Placing first order...")
-    print(f"Side: {self.base_side}, Size: {self.base_size}, Price: {self.base_price}")
-    print("---")
+    logger.info("---")
+    logger.info(f"{self.market_1}: Placing first order...")
+    logger.info(f"Side: {self.base_side}, Size: {self.base_size}, Price: {self.base_price}")
+    logger.info("---")
 
     # Place Base Order
     try:
@@ -138,16 +141,19 @@ class BotAgent:
       )
 
       # Store the order id
+      logger.debug("Placed Base Order:")
+      logger.debug(pformat(base_order))
       self.order_dict["order_id_m1"] = order_id
       self.order_dict["order_time_m1"] = datetime.now().isoformat()
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
       self.order_dict["comments"] = f"Market 1 {self.market_1}: , {e}"
-      print(f"Error placing order for {self.market_1}: {e}")
+      logger.error(f"Error placing order for {self.market_1}: {e}")
       return self.order_dict
 
     # Ensure order is live before processing
     order_status_m1 = await self.check_order_status_by_id(self.order_dict["order_id_m1"])
+    logger.debug(f"Checking Base Order Status: {order_status_m1}")
 
     # Guard: Aborder if order failed
     if order_status_m1 != "live":
@@ -156,10 +162,10 @@ class BotAgent:
       return self.order_dict
 
     # Print status - opening second order
-    print("---")
-    print(f"{self.market_2}: Placing second order...")
-    print(f"Side: {self.quote_side}, Size: {self.quote_size}, Price: {self.quote_price}")
-    print("---")
+    logger.info("---")
+    logger.info(f"{self.market_2}: Placing second order...")
+    logger.info(f"Side: {self.quote_side}, Size: {self.quote_size}, Price: {self.quote_price}")
+    logger.info("---")
 
     # Place Quote Order
     try:
@@ -175,16 +181,19 @@ class BotAgent:
       )
 
       # Store the order id
+      logger.debug("Placed Quote Order:")
+      logger.debug(pformat(quote_order))      
       self.order_dict["order_id_m2"] = order_id
       self.order_dict["order_time_m2"] = datetime.now().isoformat()
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
       self.order_dict["comments"] = f"Market 2 {self.market_2}: , {e}"
-      print(f"Error placing order for {self.market_1}: {e}")
+      logger.info(f"Error placing order for {self.market_1}: {e}")
       return self.order_dict
 
     # Ensure order is live before processing
     order_status_m2 = await self.check_order_status_by_id(self.order_dict["order_id_m2"])
+    logger.debug(f"Checking Quote Oder Status: {order_status_m2}")
 
     # Guard: Aborder if order failed
     if order_status_m2 != "live":
@@ -203,14 +212,16 @@ class BotAgent:
           price=self.accept_failsafe_base_price,
           reduce_only=True
         )
-
+        logger.debug("Placed Close Order:")
+        logger.debug(pformat(close_order))
         # Ensure order is live before proceeding
         time.sleep(2)
         order_status_close_order = await check_order_status(self.indexer, order_id)
+        logger.debug(f"Checking Close Order Status: {order_status_close_order}")
         if order_status_close_order != "FILLED":
-          print("ABORT PROGRAM")
-          print("Unexpected Error")
-          print(order_status_close_order)
+          logger.info("ABORT PROGRAM")
+          logger.info("Unexpected Error")
+          logger.info(order_status_close_order)
 
           # ABORT
           exit(1)
@@ -219,9 +230,9 @@ class BotAgent:
       except Exception as e:
         self.order_dict["pair_status"] = "ERROR"
         self.order_dict["comments"] = f"Close Market 1 {self.market_1}: , {e}"
-        print("ABORT PROGRAM")
-        print("Unexpected Error")
-        print(order_status_close_order)
+        logger.error("ABORT PROGRAM")
+        logger.error("Unexpected Error")
+        logger.error(order_status_close_order)
 
         # ABORT
         exit(1)

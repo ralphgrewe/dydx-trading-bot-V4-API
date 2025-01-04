@@ -24,7 +24,7 @@ On Windows I was using Anaconda. There, some packages (numpy, matplotlib, statsm
 conda create -n dydx python=3.12
 conda activate dydx
 conda install numpy matplotlib statsmodels
-pip install python-decouple dydx-v4-client requests
+pip install python-decouple dydx-v4-client requests logging4
 ```
 # Links
 Some more links which may be helpfull:

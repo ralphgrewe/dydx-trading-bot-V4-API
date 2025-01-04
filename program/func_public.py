@@ -4,9 +4,9 @@ import pandas as pd
 import numpy as np
 import time
 
-from pprint import pprint
-
-# Ralph Grewe Additional imports for V4 API
+from pprint import pformat
+import logging
+logger = logging.getLogger('BotLogger')
 
 # Get relevant time periods for ISO from and to
 ISO_TIMES = get_ISO_times()
@@ -29,7 +29,7 @@ async def get_candles_recent(indexer, market):
       for candle in response["candles"]:
           close_prices.append(candle["close"])
   except Exception as e:
-      print(F"Error getting recent candles for market: {market}:,  {e}")  
+      logger.error(f"Error getting recent candles for market: {market}:,  {e}")  
 
   # Construct and return close price series
   close_prices.reverse()
@@ -64,7 +64,7 @@ async def get_candles_historical(indexer, market):
         for candle in response["candles"]:
             close_prices.append({"datetime": candle["startedAt"], market: candle["close"]})
     except Exception as e:
-        print(f"Error getting historical candles: {e}")    
+        logger.error(f"Error getting historical candles: {e}")    
 
   # Construct and return DataFrame
   close_prices.reverse()
@@ -85,7 +85,7 @@ async def construct_market_prices(indexer):
       if markets["markets"][market]["status"] == 'ACTIVE':
           tradeable_markets.append(market)
       else:
-          print("Market not active: ", market)
+          logger.info("Market not active: ", market)
 
   # Set initial DateFrame
   close_prices = await get_candles_historical(indexer, tradeable_markets[0])
@@ -96,7 +96,7 @@ async def construct_market_prices(indexer):
   # You can limit the amount to loop though here to save time in development
   for market in tradeable_markets[1:]:
     # Ralph Grewe: To see some progress when fetching many markets
-    print(f"Fetching market: {market}")
+    logger.info(f"Fetching market: {market}")
     close_prices_add = await get_candles_historical(indexer, market)
     # Ralph Grewe: Adding try/except block to avoid abort if few market data frames have flaws
     try:
@@ -104,14 +104,14 @@ async def construct_market_prices(indexer):
       df_add.set_index("datetime", inplace=True)
       df = pd.merge(df, df_add, how="outer", on="datetime", copy=False)
     except Exception as e:
-        print(f"Error merging frame for {market}: {e}")      
+        logger.error(f"Error merging frame for {market}: {e}")      
     del df_add
 
   # Check any columns with NaNs
   nans = df.columns[df.isna().any()].tolist()
   if len(nans) > 0:
-    print("Dropping columns: ")
-    print(nans)
+    logger.info("Dropping columns: ")
+    logger.info(nans)
     df.drop(columns=nans, inplace=True)
 
   # Return result
