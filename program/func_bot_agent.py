@@ -129,7 +129,7 @@ class BotAgent:
     # Place Base Order
     try:
       # Ralph Grewe: We don't simply get the order_id back from DYDX V4 - get the order ID object 
-      base_order, order_id = await place_market_order(
+      base_order_transaction, base_order = await place_market_order(
         self.node,
         self.indexer,
         self.wallet,
@@ -143,7 +143,7 @@ class BotAgent:
       # Store the order id
       logger.debug("Placed Base Order:")
       logger.debug(pformat(base_order))
-      self.order_dict["order_id_m1"] = order_id
+      self.order_dict["order_id_m1"] = base_order.order_id
       self.order_dict["order_time_m1"] = datetime.now().isoformat()
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
@@ -169,7 +169,7 @@ class BotAgent:
 
     # Place Quote Order
     try:
-      quote_order, order_id = await place_market_order(
+      quote_order_transaction, quote_order = await place_market_order(
         self.node,
         self.indexer,
         self.wallet,
@@ -183,7 +183,7 @@ class BotAgent:
       # Store the order id
       logger.debug("Placed Quote Order:")
       logger.debug(pformat(quote_order))      
-      self.order_dict["order_id_m2"] = order_id
+      self.order_dict["order_id_m2"] = quote_order.order_id
       self.order_dict["order_time_m2"] = datetime.now().isoformat()
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
@@ -202,7 +202,7 @@ class BotAgent:
 
       # Close order 1:
       try:
-        close_order, order_id = await place_market_order(
+        close_order_transaction, close_order = await place_market_order(
           self.node,
           self.indexer,
           self.wallet,
@@ -216,7 +216,7 @@ class BotAgent:
         logger.debug(pformat(close_order))
         # Ensure order is live before proceeding
         time.sleep(2)
-        order_status_close_order = await check_order_status(self.indexer, order_id)
+        order_status_close_order = await check_order_status(self.indexer, close_order.order_id)
         logger.debug(f"Checking Close Order Status: {order_status_close_order}")
         if order_status_close_order != "FILLED":
           logger.info("ABORT PROGRAM")

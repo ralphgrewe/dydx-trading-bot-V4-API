@@ -4,3 +4,4 @@ venv
 __pycache__
 bot_agents.json
 cointegrated_pairs*.csv
+bot.log

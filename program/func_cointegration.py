@@ -22,7 +22,7 @@ def calculate_half_life(spread):
   try:
     halflife = round(-np.log(2) / res.params.iloc[1], 0)
   except Exception as e:
-    logger.error(f"Error computing halflife {halflife}: {e}")
+    logger.error(f"calculate_half_life() failed: {halflife}: {e}")
     logger.debug(pformat(res))
     
   return halflife
@@ -57,7 +57,7 @@ def calculate_cointegration(series_1, series_2):
     return coint_flag, hedge_ratio, half_life
   except Exception as e:
     # Ralph Grewe: Sometimes something goes wrong - better skip one coint instead of crashing whole script
-    logger.error(f"calculate cointegration failed: {e}")
+    logger.error(f"calculate_cointegration() failed: {e}")
     return 0, 0, -1
 
 # Store Cointegration Results

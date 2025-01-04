@@ -104,7 +104,8 @@ async def construct_market_prices(indexer):
       df_add.set_index("datetime", inplace=True)
       df = pd.merge(df, df_add, how="outer", on="datetime", copy=False)
     except Exception as e:
-        logger.error(f"Error merging frame for {market}: {e}")      
+        logger.error(f"Error merging frame for {market}: {e}")
+        logger.debug(pformat(df_add))
     del df_add
 
   # Check any columns with NaNs

@@ -71,6 +71,7 @@ async def open_positions(node, indexer, wallet):
 
         # Place trade
         if not is_base_open and not is_quote_open:
+          logger.info(f"Checking potential trade...")
 
           # Determine side
           base_side = Order.SIDE_BUY if z_score < 0 else Order.SIDE_SELL
@@ -114,6 +115,7 @@ async def open_positions(node, indexer, wallet):
 
             # Guard: Ensure collateral
             if free_collateral < USD_MIN_COLLATERAL:
+              logger.info(f"Insufficient collateral.")
               break
 
             # Create Bot Agent
@@ -153,6 +155,8 @@ async def open_positions(node, indexer, wallet):
               # Confirm live status in print
               logger.info("Trade status: Live")
               logger.info("---")
+          else:
+            logger.info(f"Quantities failed: base quantity {base_quantity}, base step size {base_step_size}, quote quantity {quote_quantity}, quote step size {quote_step_size}")
 
   # Save agents
   logger.info(f"Success: Manage open trades checked")

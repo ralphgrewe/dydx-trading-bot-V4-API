@@ -44,7 +44,7 @@ async def is_open_positions(indexer, market):
                   for position in positions:
                       if position['market'] == market:
                         open_positions.append(position)
-      logger.debug("Open Positions:")
+      logger.debug(f"is_open_positions() for market {market}:")
       logger.debug(pformat(open_positions))
   except Exception as e:
       logger.error(f"Error in is_open_positions(), market {market}: {e}")
@@ -75,18 +75,14 @@ async def place_market_order(node, indexer, wallet, market_id, side, size, price
         reduce_only = reduce_only,
         good_til_block = good_til_block
     )
-    logger.debug("Placed new order:")
-    logger.debug(pformat(new_order))
 
     transaction = await node.place_order(
         wallet=wallet,
         order=new_order,
     )
     wallet.sequence += 1
-    logger.debug("Order result:")
-    logger.debug(pformat(transaction))
 
-    return transaction, order_id
+    return transaction, new_order
 
 # Ralph Grewe: OrderId is given back a string
 # Trying to reconstruc the OrderId required for cancelling - no idea if it's working...

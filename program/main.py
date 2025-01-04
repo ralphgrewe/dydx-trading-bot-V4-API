@@ -17,7 +17,7 @@ logger = logging.getLogger('BotLogger')
 
 async def main():
   # Connect to client
-  logFile = logging.handlers.RotatingFileHandler("bot.log", mode='a', maxBytes=65535, backupCount=32786, encoding='utf-8', delay=False, errors=None)
+  logFile = logging.handlers.RotatingFileHandler("bot.log", mode='a', maxBytes=2097120, backupCount=32786, encoding='utf-8', delay=False, errors=None)
   logFile.setLevel(logging.DEBUG)
   logFileFormatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s")
   logFile.setFormatter(logFileFormatter)
@@ -25,11 +25,11 @@ async def main():
   logConsole = logging.StreamHandler(sys.stdout)
   logConsole.setLevel(logging.INFO)
   logger.addHandler(logConsole)
-  logger.setLevel(logging.INFO)
+  logger.setLevel(logging.DEBUG)
   logger.info("Bot Started")
 
   try:
-    logger.info("Connecting to Client...")
+    logger.info("-----------------------------Connecting to Client...---------------------------------------")
     # Ralph Grewe: We have to await because it's an async function
     node, indexer, wallet = await connect_dydx()
   except Exception as e:
@@ -50,7 +50,7 @@ async def main():
 
     # Construct Market Prices
     try:
-      logger.info("\nFetching market prices, please allow 3 mins...")
+      logger.info("\n\n--------------------------------------Fetching market prices, please allow 3 mins...------------------------------")
       df_market_prices = await construct_market_prices(indexer)
     except Exception as e:
       logger.error(f"Error constructing market prices: {e}")
@@ -58,7 +58,7 @@ async def main():
 
     # Store Cointegrated Pairs
     try:
-      logger.info("\nStoring cointegrated pairs...")
+      logger.info("\n\n------------------------------------------Storing cointegrated pairs...--------------------------------------------")
       stores_result = store_cointegration_results(df_market_prices)
       if stores_result != "saved":
         logger.error("Error saving cointegrated pairs")
@@ -82,7 +82,7 @@ async def main():
     # Place trades for opening positions
     if PLACE_TRADES:
       try:
-        logger.info("Finding trading opportunities...")
+        logger.info("\n\n------------------------------------------Finding trading opportunities...-----------------------------------------")
         await open_positions(node, indexer, wallet)
       except Exception as e:
         logger.error(f"Error trading pairs: {e}")
