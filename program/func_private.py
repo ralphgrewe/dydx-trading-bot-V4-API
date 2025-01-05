@@ -213,7 +213,7 @@ async def abort_all_positions(node, indexer, wallet):
     # Return closed orders
     return close_orders
 
-async def get_order_by_client_id(indexer, order_client_id, order_market=None, order_size=None):
+async def get_order_by_client_id(indexer, order_client_id, order_market=None, order_size=None, order_side=None):
     order_result = None
     try:
       orders = await indexer.account.get_subaccount_orders(DYDX_ADDRESS, 0)
@@ -221,6 +221,15 @@ async def get_order_by_client_id(indexer, order_client_id, order_market=None, or
         if int(order["clientId"]) == int(order_client_id):
           # Ralph Grewe: Further checks should be added to verify it's the order we are looking for. It's not guaranteed that clientID is only used once.
           logger.debug(pformat(order))
+          if order_market != None:
+            if order["ticker"] != order_market:
+              continue
+          if order_size != None:
+            if order["size"] != order_size:
+              continue
+          if order_side != None:
+            if order["side"] != order_side:
+              continue
           order_result = order
     except Exception as e:
         print(f"Exception when retrieving order status: {e}")
