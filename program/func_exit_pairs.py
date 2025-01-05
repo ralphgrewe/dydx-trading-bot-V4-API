@@ -2,14 +2,17 @@ from constants import CLOSE_AT_ZSCORE_CROSS
 from func_utils import format_number
 from func_public import get_candles_recent
 from func_cointegration import calculate_zscore
-from func_private import place_market_order
+from func_private import place_market_order, get_open_positions, get_order_by_client_id
 import json
 import time
 
-from pprint import pprint
+# Ralph Grewe additional oimports
+from pprint import pformat
+import logging
+logger = logging.getLogger('BotLogger')
 
 # Manage trade exits
-def manage_trade_exits(client):
+async def manage_trade_exits(node, indexer, wallet):
 
   """
     Manage exiting open positions
@@ -28,14 +31,18 @@ def manage_trade_exits(client):
 
   # Guard: Exit if no open positions in file
   if len(open_positions_dict) < 1:
+    logger.debug("No open positions in bot_agents.json")
     return "complete"
+  
+  logger.debug("Managing Positions:")
+  logger.debug(pformat(open_positions_dict))
+
 
   # Get all open positions per trading platform
-  exchange_pos = client.private.get_positions(status="OPEN")
-  all_exc_pos = exchange_pos.data["positions"]
+  exchange_positions = await get_open_positions(indexer)
   markets_live = []
-  for p in all_exc_pos:
-    markets_live.append(p["market"])
+  for position in exchange_positions:
+    markets_live.append(position["market"])
 
   # Protect API
   time.sleep(0.5)
@@ -49,31 +56,32 @@ def manage_trade_exits(client):
 
     # Extract position matching information from file - market 1
     position_market_m1 = position["market_1"]
-    position_size_m1 = position["order_m1_size"]
-    position_side_m1 = position["order_m1_side"]
+    position_size_m1 = float(position["order_m1_size"])
+    position_side_m1 = float(position["order_m1_side"])
 
     # Extract position matching information from file - market 2
     position_market_m2 = position["market_2"]
-    position_size_m2 = position["order_m2_size"]
-    position_side_m2 = position["order_m2_side"]
+    position_size_m2 = float(position["order_m2_size"])
+    position_side_m2 = float(position["order_m2_side"])
 
     # Protect API
     time.sleep(0.5)
 
     # Get order info m1 per exchange
-    order_m1 = client.private.get_order_by_id(position["order_id_m1"])
+    logger.info(f"Order M1 ID:  {position["order_client_id_m1"]}")
+    order_m1 = await get_order_by_client_id(position["order_client_id_m1"])
     order_market_m1 = order_m1.data["order"]["market"]
-    order_size_m1 = order_m1.data["order"]["size"]
-    order_side_m1 = order_m1.data["order"]["side"]
+    order_size_m1 = float(order_m1.data["order"]["size"])
+    order_side_m1 = float(order_m1.data["order"]["side"])
 
     # Protect API
     time.sleep(0.5)
 
     # Get order info m2 per exchange
-    order_m2 = client.private.get_order_by_id(position["order_id_m2"])
+    order_m2 = await get_order_by_client_id(position["order_client_id_m2"])
     order_market_m2 = order_m2.data["order"]["market"]
-    order_size_m2 = order_m2.data["order"]["size"]
-    order_side_m2 = order_m2.data["order"]["side"]
+    order_size_m2 = float(order_m2.data["order"]["size"])
+    order_side_m2 = float(order_m2.data["order"]["side"])
 
     # Perform matching checks
     check_m1 = position_market_m1 == order_market_m1 and position_size_m1 == order_size_m1 and position_side_m1 == order_side_m1
@@ -86,13 +94,13 @@ def manage_trade_exits(client):
       continue
 
     # Get prices
-    series_1 = get_candles_recent(client, position_market_m1)
+    series_1 = get_candles_recent(indexer, position_market_m1)
     time.sleep(0.2)
-    series_2 = get_candles_recent(client, position_market_m2)
+    series_2 = get_candles_recent(indexer, position_market_m2)
     time.sleep(0.2)
 
     # Get markets for reference of tick size
-    markets = client.public.get_markets().data
+    markets = await indexer.markets.get_perpetual_markets()
 
     # Protect API
     time.sleep(0.2)
@@ -101,8 +109,8 @@ def manage_trade_exits(client):
     if CLOSE_AT_ZSCORE_CROSS:
 
       # Initialize z_scores
-      hedge_ratio = position["hedge_ratio"]
-      z_score_traded = position["z_score"]
+      hedge_ratio = float(position["hedge_ratio"])
+      z_score_traded = float(position["z_score"])
       if len(series_1) > 0 and len(series_1) == len(series_2):
         spread = series_1 - (hedge_ratio * series_2)
         z_score_current = calculate_zscore(spread).values.tolist()[-1]
@@ -140,10 +148,10 @@ def manage_trade_exits(client):
       price_m2 = float(series_2[-1])
       accept_price_m1 = price_m1 * 1.05 if side_m1 == "BUY" else price_m1 * 0.95
       accept_price_m2 = price_m2 * 1.05 if side_m2 == "BUY" else price_m2 * 0.95
-      tick_size_m1 = markets["markets"][position_market_m1]["tickSize"]
-      tick_size_m2 = markets["markets"][position_market_m2]["tickSize"]
-      accept_price_m1 = format_number(accept_price_m1, tick_size_m1)
-      accept_price_m2 = format_number(accept_price_m2, tick_size_m2)
+      tick_size_m1 = float(markets["markets"][position_market_m1]["tickSize"])
+      tick_size_m2 = float(markets["markets"][position_market_m2]["tickSize"])
+      accept_price_m1 = float(format_number(accept_price_m1, tick_size_m1))
+      accept_price_m2 = float(format_number(accept_price_m2, tick_size_m2))
 
       # Close positions
       try:
@@ -152,8 +160,10 @@ def manage_trade_exits(client):
         print(">>> Closing market 1 <<<")
         print(f"Closing position for {position_market_m1}")
 
-        close_order_m1 = place_market_order(
-          client,
+        close_order_m1_transaction, close_order_m1 = place_market_order(
+          node,
+          indexer,
+          wallet,
           market=position_market_m1,
           side=side_m1,
           size=position_size_m1,
@@ -171,8 +181,10 @@ def manage_trade_exits(client):
         print(">>> Closing market 2 <<<")
         print(f"Closing position for {position_market_m2}")
 
-        close_order_m2 = place_market_order(
-          client,
+        close_order_m2_transaction, close_order_m2 = place_market_order(
+          node,
+          indexer,
+          wallet,
           market=position_market_m2,
           side=side_m2,
           size=position_size_m2,

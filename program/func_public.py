@@ -1,4 +1,4 @@
-from constants import RESOLUTION
+from constants import RESOLUTION, MARKET_MIN_OPEN_INTEREST
 from func_utils import get_ISO_times
 import pandas as pd
 import numpy as np
@@ -83,10 +83,18 @@ async def construct_market_prices(indexer):
   # Find tradeable pairs
   for market in markets["markets"]:
       if markets["markets"][market]["status"] == 'ACTIVE':
-          tradeable_markets.append(market)
+          openInterest = float(markets["markets"][market]["openInterest"]) * float(markets["markets"][market]["oraclePrice"])
+          logger.info(f"Market {market} Open Interest: {openInterest}")
+          #logger.debug(pformat(markets["markets"][market]))
+          # Ralph Grewe: Avoid trying to trade in very iliquid markets
+          if openInterest > MARKET_MIN_OPEN_INTEREST:
+            tradeable_markets.append(market)
       else:
           logger.info("Market not active: ", market)
 
+  logger.debug("Tradeable Markets:")
+  logger.debug(tradeable_markets)
+  
   # Set initial DateFrame
   close_prices = await get_candles_historical(indexer, tradeable_markets[0])
   df = pd.DataFrame(close_prices)

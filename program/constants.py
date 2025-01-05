@@ -7,13 +7,13 @@ from dydx_v4_client.indexer.candles_resolution import CandlesResolution
 MODE = "DEVELOPMENT"
 
 # Close all open positions and orders
-ABORT_ALL_POSITIONS = True
+ABORT_ALL_POSITIONS = False
 
 # Find Cointegrated Pairs
 FIND_COINTEGRATED = False
 
 # Manage Exits
-MANAGE_EXITS = False
+MANAGE_EXITS = True
 
 # Place Trades
 PLACE_TRADES = True
@@ -54,3 +54,6 @@ HTTP_PROVIDER = HTTP_PROVIDER_MAINNET if MODE == "PRODUCTION" else HTTP_PROVIDER
 
 # Ralph Grewe: New API is Asyncronous - Adding a lock for thread safety (still there are some strange issues)
 WALLET_LOCK = asyncio.Lock()
+
+# Ralph Grewe: Avoid Markets with to low open interest
+MARKET_MIN_OPEN_INTEREST = 100000

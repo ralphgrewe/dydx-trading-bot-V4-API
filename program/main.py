@@ -17,7 +17,7 @@ logger = logging.getLogger('BotLogger')
 
 async def main():
   # Connect to client
-  logFile = logging.handlers.RotatingFileHandler("bot.log", mode='a', maxBytes=2097120, backupCount=32786, encoding='utf-8', delay=False, errors=None)
+  logFile = logging.handlers.RotatingFileHandler("bot.log", mode='a', maxBytes=67107840, backupCount=32786, encoding='utf-8', delay=False, errors=None)
   logFile.setLevel(logging.DEBUG)
   logFileFormatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s")
   logFile.setFormatter(logFileFormatter)
@@ -73,10 +73,10 @@ async def main():
     # Place trades for opening positions
     if MANAGE_EXITS:
       try:
-        logger.info("Managing exits...")
-        manage_trade_exits(client)
+        logger.info("\n\n------------------------------------------Managing exits...--------------------------------------------------------")
+        await manage_trade_exits(node, indexer, wallet)
       except Exception as e:
-        logger.error("Error managing exiting positions: {e}")
+        logger.error(f"Error managing exiting positions: {e}")
         exit(1)
 
     # Place trades for opening positions

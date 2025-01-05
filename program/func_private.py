@@ -9,8 +9,9 @@ from pprint import pformat
 from constants import DYDX_ADDRESS
 from dydx_v4_client.node.market import Market
 from dydx_v4_client import MAX_CLIENT_ID, OrderFlags
-from v4_proto.dydxprotocol.clob.order_pb2 import Order, OrderId
+from v4_proto.dydxprotocol.clob.order_pb2 import Order
 from dydx_v4_client.indexer.rest.constants import OrderType
+from pprint import pformat
 import random
 import logging
 logger = logging.getLogger('BotLogger')
@@ -212,16 +213,16 @@ async def abort_all_positions(node, indexer, wallet):
     # Return closed orders
     return close_orders
 
-async def check_order_status(indexer, order_id):
-    order_status = "FAILED"
+async def get_order_by_client_id(indexer, order_client_id, order_market=None, order_size=None):
+    order_result = None
     try:
       orders = await indexer.account.get_subaccount_orders(DYDX_ADDRESS, 0)
       for order in orders:
-        if int(order["clientId"]) == int(order_id.client_id):
+        if int(order["clientId"]) == int(order_client_id):
           # Ralph Grewe: Further checks should be added to verify it's the order we are looking for. It's not guaranteed that clientID is only used once.
-          order_status = order["status"]
+          logger.debug(pformat(order))
+          order_result = order
     except Exception as e:
         print(f"Exception when retrieving order status: {e}")
-        order_status = "FAILED"    
 
-    return order_status   
+    return order_result

@@ -1,4 +1,4 @@
-from func_private import place_market_order, cancel_order, check_order_status
+from func_private import place_market_order, cancel_order, get_order_by_client_id
 from datetime import datetime, timedelta
 import time
 
@@ -75,7 +75,7 @@ class BotAgent:
     }
 
   # Check order status by id
-  async def check_order_status_by_id(self, order_id):
+  async def check_order_status_by_id(self, order_client_id):
 
     # Allow time to process
     time.sleep(2)
@@ -83,7 +83,12 @@ class BotAgent:
     # Ralph Grewe: It's a bit more difficult here because we only have the order_id object and not the string,
     # which usally is used by get_order(). We have to find the right order by the client ID.
     # Furthermore, I assume that failed orders never show up - so if we don't find an order with the client ID, we assume it's faild
-    order_status = await check_order_status(self.indexer, order_id)
+    order = await get_order_by_client_id(self.indexer, order_client_id)
+    if order == None:
+      return "error"
+
+   # Extract order status
+    order_status = order["status"]
 
     # Guard: If order cancelled move onto next Pair
     if order_status == "CANCELED":
@@ -99,7 +104,10 @@ class BotAgent:
     # Guard: If order not filled wait until order expiration
     else:
       time.sleep(15)
-      order_status = await check_order_status(self.indexer, order_id)
+      order = await get_order_by_client_id(self.indexer, order_client_id)
+      if order == None:
+        return "error"
+      order_status = order["status"]
 
       # Guard: If order cancelled move onto next Pair
       if order_status == "CANCELED":
@@ -109,7 +117,7 @@ class BotAgent:
 
       # Guard: If not filled, cancel order
       if order_status != "FILLED":
-        cancel_order(self.node, self.indexer, order_id)
+        cancel_order(self.node, self.indexer, order_client_id)
         self.order_dict["pair_status"] = "ERROR"
         logger.info(f"{self.market_1} vs {self.market_2} - Order error...")
         return "error"
@@ -143,7 +151,9 @@ class BotAgent:
       # Store the order id
       logger.debug("Placed Base Order:")
       logger.debug(pformat(base_order))
-      self.order_dict["order_id_m1"] = base_order.order_id
+      self.order_dict["order_client_id_m1"] = base_order.order_id.client_id
+      self.order_dict["order_market_m1"] = self.market_1
+      self.order_dict["order_size_m1"] = self.base_size
       self.order_dict["order_time_m1"] = datetime.now().isoformat()
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
@@ -152,7 +162,7 @@ class BotAgent:
       return self.order_dict
 
     # Ensure order is live before processing
-    order_status_m1 = await self.check_order_status_by_id(self.order_dict["order_id_m1"])
+    order_status_m1 = await self.check_order_status_by_id(self.order_dict["order_client_id_m1"])
     logger.debug(f"Checking Base Order Status: {order_status_m1}")
 
     # Guard: Aborder if order failed
@@ -183,7 +193,9 @@ class BotAgent:
       # Store the order id
       logger.debug("Placed Quote Order:")
       logger.debug(pformat(quote_order))      
-      self.order_dict["order_id_m2"] = quote_order.order_id
+      self.order_dict["order_client_id_m2"] = quote_order.order_id.client_id
+      self.order_dict["order_market_m1"] = self.market_2
+      self.order_dict["order_size_m1"] = self.quote_size     
       self.order_dict["order_time_m2"] = datetime.now().isoformat()
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
@@ -192,7 +204,7 @@ class BotAgent:
       return self.order_dict
 
     # Ensure order is live before processing
-    order_status_m2 = await self.check_order_status_by_id(self.order_dict["order_id_m2"])
+    order_status_m2 = await self.check_order_status_by_id(self.order_dict["order_client_id_m2"])
     logger.debug(f"Checking Quote Oder Status: {order_status_m2}")
 
     # Guard: Aborder if order failed
@@ -216,7 +228,13 @@ class BotAgent:
         logger.debug(pformat(close_order))
         # Ensure order is live before proceeding
         time.sleep(2)
-        order_status_close_order = await check_order_status(self.indexer, close_order.order_id)
+        close_order = await get_order_by_client_id(self.indexer, close_order.order_id.client_id)
+        if close_order == None:
+          logger.info("ABORT PROGRAM")
+          logger.info("Unexpected Error")
+          exit(1)
+
+        order_status_close_order = close_order["status"]
         logger.debug(f"Checking Close Order Status: {order_status_close_order}")
         if order_status_close_order != "FILLED":
           logger.info("ABORT PROGRAM")
