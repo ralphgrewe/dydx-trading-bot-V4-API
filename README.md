@@ -18,7 +18,7 @@ Here is an Example of the DYDX address (relevant part removed) and the menu item
 
 ![Alt text](./images/DydxSecretPhrase.jpg "DYDX Exchange Export Secret Phrase Menu")
 
-# Setting up the python environment
+# Setting up the python environment on Windows (using Anaconda)
 On Windows I was using Anaconda. There, some packages (numpy, matplotlib, statsmodels) seem to be best installed using conda. The remaining packages (python-decouple, dydx-v4-client requests) can be installed using pip. Also, I would recommend creating a virtual environment:
 ```
 conda create -n dydx python=3.12
@@ -26,7 +26,17 @@ conda activate dydx
 conda install numpy matplotlib statsmodels
 pip install python-decouple dydx-v4-client requests
 ```
+
+# Setting up the python environment on raspberry pi
+Using Raspberry Pi OS "Debian Bookworm" Lite 32 Bit. I strongly recommend creating a "venv" to avoid conflicts with other python applications. Also, pip is only working using a venv on Debian Bookworm, so you would have to install the packages using apt instead of pip if using a plain install. Here are the commands to install on raspberry pi:
+```
+user@raspberrypi:~ $ python -m venv dydx
+user@raspberrypi:~ $ sudo apt-get install python3-dev git
+user@raspberrypi:~ $ source dydx/bin/activate
+(dydx) ralph@raspberrypi:~ $ pip install numpy matplotlib statsmodels python-decouple dydx-v4-client requests
+...
+
 # Links
 Some more links which may be helpfull:
 * DYDX V4 Clients Github: https://github.com/dydxprotocol/v4-clients
-* DYDX V4 Technical Architecture: https://dydx.exchange/blog/v4-technical-architecture-overview
+* DYDX V4 Technical Architecture: https://dydx.exchange/blog/v4-technical-architecture-overviewR

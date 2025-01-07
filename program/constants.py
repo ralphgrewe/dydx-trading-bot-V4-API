@@ -7,7 +7,7 @@ from dydx_v4_client.indexer.candles_resolution import CandlesResolution
 MODE = "DEVELOPMENT"
 
 # Close all open positions and orders
-ABORT_ALL_POSITIONS = False
+ABORT_ALL_POSITIONS =True
 
 # Find Cointegrated Pairs
 FIND_COINTEGRATED = False
@@ -56,4 +56,4 @@ HTTP_PROVIDER = HTTP_PROVIDER_MAINNET if MODE == "PRODUCTION" else HTTP_PROVIDER
 WALLET_LOCK = asyncio.Lock()
 
 # Ralph Grewe: Avoid Markets with to low open interest
-MARKET_MIN_OPEN_INTEREST = 100000
+MARKET_MIN_OPEN_INTEREST = 250000

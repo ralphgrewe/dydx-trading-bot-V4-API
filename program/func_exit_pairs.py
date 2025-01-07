@@ -34,8 +34,8 @@ async def manage_trade_exits(node, indexer, wallet):
     logger.debug("No open positions in bot_agents.json")
     return "complete"
   
-  logger.debug("Managing Positions:")
-  logger.debug(pformat(open_positions_dict))
+  logger.info("Managing Positions:")
+  logger.info(pformat(open_positions_dict))
 
 
   # Get all open positions per trading platform
@@ -57,12 +57,12 @@ async def manage_trade_exits(node, indexer, wallet):
     # Extract position matching information from file - market 1
     position_market_m1 = position["market_1"]
     position_size_m1 = float(position["order_m1_size"])
-    position_side_m1 = float(position["order_m1_side"])
+    position_side_m1 = position["order_m1_side"]
 
     # Extract position matching information from file - market 2
     position_market_m2 = position["market_2"]
     position_size_m2 = float(position["order_m2_size"])
-    position_side_m2 = float(position["order_m2_side"])
+    position_side_m2 = position["order_m2_side"]
 
     # Protect API
     time.sleep(0.5)
@@ -89,6 +89,7 @@ async def manage_trade_exits(node, indexer, wallet):
     check_live = position_market_m1 in markets_live and position_market_m2 in markets_live
 
     # Guard: If not all match exit with error
+    logger.info(f"checkm1: {position_market_m1}, {order_market_m1}; size: {position_size_m1}, {order_size_m1}; side: {position_side_m1}, {order_side_m1}")
     if not check_m1 or not check_m2 or not check_live:
       print(f"Warning: Not all open positions match exchange records for {position_market_m1} and {position_market_m2}")
       continue
@@ -119,6 +120,7 @@ async def manage_trade_exits(node, indexer, wallet):
       z_score_level_check = abs(z_score_current) >= abs(z_score_traded)
       z_score_cross_check = (z_score_current < 0 and z_score_traded > 0) or (z_score_current > 0 and z_score_traded < 0)
 
+      logger.info(f"{order_market_m1} vs {order_market_m2}: zscore {z_score_current}")
       # Close trade
       if z_score_level_check and z_score_cross_check:
 
