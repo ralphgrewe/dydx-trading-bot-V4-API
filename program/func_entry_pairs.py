@@ -92,8 +92,8 @@ async def open_positions(node, indexer, wallet):
           accept_failsafe_base_price = float(format_number(failsafe_base_price, base_tick_size))
 
           # Get size
-          base_quantity = 1 / base_price * USD_PER_TRADE
-          quote_quantity = 1 / quote_price * USD_PER_TRADE
+          base_quantity = 1.0 / base_price * USD_PER_TRADE
+          quote_quantity = 1.0 / quote_price * USD_PER_TRADE
           base_step_size = float(markets["markets"][base_market]["stepSize"])
           quote_step_size = float(markets["markets"][quote_market]["stepSize"])
 
@@ -160,6 +160,7 @@ async def open_positions(node, indexer, wallet):
 
   # Save agents
   logger.info(f"Success: Manage open trades checked")
+  logger.info(pformat(bot_agents))
   if len(bot_agents) > 0:
     with open("bot_agents.json", "w") as f:
       json.dump(bot_agents, f)

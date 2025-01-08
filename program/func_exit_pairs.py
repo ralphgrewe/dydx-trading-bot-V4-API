@@ -7,6 +7,7 @@ import json
 import time
 
 # Ralph Grewe additional oimports
+from v4_proto.dydxprotocol.clob.order_pb2 import Order
 from pprint import pformat
 import logging
 logger = logging.getLogger('BotLogger')
@@ -27,6 +28,7 @@ async def manage_trade_exits(node, indexer, wallet):
     open_positions_file = open("bot_agents.json")
     open_positions_dict = json.load(open_positions_file)
   except:
+    logger.info("Couldn't open file bot_agents.json.")
     return "complete"
 
   # Guard: Exit if no open positions in file
@@ -34,10 +36,6 @@ async def manage_trade_exits(node, indexer, wallet):
     logger.debug("No open positions in bot_agents.json")
     return "complete"
   
-  logger.info("Managing Positions:")
-  logger.info(pformat(open_positions_dict))
-
-
   # Get all open positions per trading platform
   exchange_positions = await get_open_positions(indexer)
   markets_live = []
@@ -72,7 +70,11 @@ async def manage_trade_exits(node, indexer, wallet):
     order_m1 = await get_order_by_client_id(indexer, position["order_client_id_m1"])
     order_market_m1 = order_m1["ticker"]
     order_size_m1 = float(order_m1["size"])
-    order_side_m1 = order_m1["side"]
+    if order_m1["side"] == "SELL":
+      order_side_m1 = Order.SIDE_SELL
+    else:
+      order_side_m1 = Order.SIDE_BUY
+
 
     # Protect API
     time.sleep(0.5)
@@ -81,7 +83,11 @@ async def manage_trade_exits(node, indexer, wallet):
     order_m2 = await get_order_by_client_id(indexer, position["order_client_id_m2"])
     order_market_m2 = order_m2["ticker"]
     order_size_m2 = float(order_m2["size"])
-    order_side_m2 = order_m2["side"]
+    if order_m2["side"] == "SELL":
+      order_side_m2 = Order.SIDE_SELL
+    else:
+      order_side_m2 = Order.SIDE_BUY
+
 
     # Perform matching checks
     check_m1 = position_market_m1 == order_market_m1 and position_size_m1 == order_size_m1 and position_side_m1 == order_side_m1
@@ -90,6 +96,7 @@ async def manage_trade_exits(node, indexer, wallet):
 
     # Guard: If not all match exit with error
     logger.info(f"checkm1: {position_market_m1}, {order_market_m1}; size: {position_size_m1}, {order_size_m1}; side: {position_side_m1}, {order_side_m1}")
+    logger.info(f"checkm2: {position_market_m2}, {order_market_m2}; size: {position_size_m2}, {order_size_m2}; side: {position_side_m2}, {order_side_m2}")
     if not check_m1 or not check_m2 or not check_live:
       print(f"Warning: Not all open positions match exchange records for {position_market_m1} and {position_market_m2}")
       continue

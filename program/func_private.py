@@ -76,6 +76,8 @@ async def place_market_order(node, indexer, wallet, market_id, side, size, price
         reduce_only = reduce_only,
         good_til_block = good_til_block
     )
+    realized_order_size = float(new_order.quantums) / (10.0 ** -market.market["atomicResolution"])
+    logger.debug(f"Quantums: {new_order.quantums}, realized order size: {realized_order_size}")
 
     transaction = await node.place_order(
         wallet=wallet,
@@ -83,7 +85,7 @@ async def place_market_order(node, indexer, wallet, market_id, side, size, price
     )
     wallet.sequence += 1
 
-    return transaction, new_order
+    return realized_order_size, transaction, new_order
 
 # Ralph Grewe: OrderId is given back a string
 # Trying to reconstruc the OrderId required for cancelling - no idea if it's working...

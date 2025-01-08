@@ -12,6 +12,7 @@ from func_exit_pairs import manage_trade_exits
 import asyncio
 import logging
 import sys
+from grpc import _channel
 
 logger = logging.getLogger('BotLogger')
 
@@ -81,10 +82,18 @@ async def main():
 
     # Place trades for opening positions
     if PLACE_TRADES:
+
       try:
         logger.info("\n\n------------------------------------------Finding trading opportunities...-----------------------------------------")
         await open_positions(node, indexer, wallet)
+      except _channel._InactiveRpcError as rpc_error:
+        # Specific handling for _InactiveRpcError
+        if rpc_error.details() == "Received http2 header with status: 503":
+          logger.warning("Warning: Received http2 header with status 503, the service may be temporarily unavailable. Continuing...")
+        else:
+          logger.error(f"gRPC error: {rpc_error}")
       except Exception as e:
+                # General exception handling
         logger.error(f"Error trading pairs: {e}")
         exit(1)
 

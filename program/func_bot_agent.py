@@ -137,7 +137,7 @@ class BotAgent:
     # Place Base Order
     try:
       # Ralph Grewe: We don't simply get the order_id back from DYDX V4 - get the order ID object 
-      base_order_transaction, base_order = await place_market_order(
+      realized_order_size, base_order_transaction, base_order = await place_market_order(
         self.node,
         self.indexer,
         self.wallet,
@@ -149,11 +149,10 @@ class BotAgent:
       )
 
       # Store the order id
-      logger.debug("Placed Base Order:")
-      logger.debug(pformat(base_order))
+      logger.debug("Placed Base Order")
       self.order_dict["order_client_id_m1"] = base_order.order_id.client_id
       self.order_dict["order_market_m1"] = self.market_1
-      self.order_dict["order_size_m1"] = self.base_size
+      self.order_dict["order_size_m1"] = realized_order_size
       self.order_dict["order_time_m1"] = datetime.now().isoformat()
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
@@ -179,7 +178,7 @@ class BotAgent:
 
     # Place Quote Order
     try:
-      quote_order_transaction, quote_order = await place_market_order(
+      realized_order_size, quote_order_transaction, quote_order = await place_market_order(
         self.node,
         self.indexer,
         self.wallet,
@@ -194,8 +193,8 @@ class BotAgent:
       logger.debug("Placed Quote Order:")
       logger.debug(pformat(quote_order))      
       self.order_dict["order_client_id_m2"] = quote_order.order_id.client_id
-      self.order_dict["order_market_m1"] = self.market_2
-      self.order_dict["order_size_m1"] = self.quote_size     
+      self.order_dict["order_market_m2"] = self.market_2
+      self.order_dict["order_size_m2"] = realized_order_size     
       self.order_dict["order_time_m2"] = datetime.now().isoformat()
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
@@ -214,7 +213,7 @@ class BotAgent:
 
       # Close order 1:
       try:
-        close_order_transaction, close_order = await place_market_order(
+        realized_order_size, close_order_transaction, close_order = await place_market_order(
           self.node,
           self.indexer,
           self.wallet,
