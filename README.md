@@ -31,9 +31,10 @@ pip install python-decouple dydx-v4-client requests
 Using Raspberry Pi OS "Debian Bookworm" Lite 32 Bit. I strongly recommend creating a "venv" to avoid conflicts with other python applications. Also, pip is only working using a venv on Debian Bookworm, so you would have to install the packages using apt instead of pip if using a plain install. Here are the commands to install on raspberry pi:
 ```
 user@raspberrypi:~ $ python -m venv dydx
-user@raspberrypi:~ $ sudo apt-get install python3-dev git
+user@raspberrypi:~ $ sudo apt-get install python3-dev git libopenblas-dev
 user@raspberrypi:~ $ source dydx/bin/activate
 (dydx) ralph@raspberrypi:~ $ pip install numpy matplotlib statsmodels python-decouple dydx-v4-client requests
+(dydx) ralph@raspberrypi:~ $ git clone https://github.com/ralphgrewe/dydx-trading-bot-V4-API.git
 ...
 
 # Links
