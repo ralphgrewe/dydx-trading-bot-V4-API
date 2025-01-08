@@ -149,7 +149,7 @@ class BotAgent:
       )
 
       # Store the order id
-      logger.debug("Placed Base Order")
+      logger.debug("Placed Base Order, realized size: {realized_order_size}")
       self.order_dict["order_client_id_m1"] = base_order.order_id.client_id
       self.order_dict["order_market_m1"] = self.market_1
       self.order_dict["order_size_m1"] = realized_order_size
@@ -190,8 +190,7 @@ class BotAgent:
       )
 
       # Store the order id
-      logger.debug("Placed Quote Order:")
-      logger.debug(pformat(quote_order))      
+      logger.debug("Placed Quote Order, realized size: {realized_order_size}") 
       self.order_dict["order_client_id_m2"] = quote_order.order_id.client_id
       self.order_dict["order_market_m2"] = self.market_2
       self.order_dict["order_size_m2"] = realized_order_size     
