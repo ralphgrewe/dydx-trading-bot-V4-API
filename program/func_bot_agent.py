@@ -195,6 +195,7 @@ class BotAgent:
       self.order_dict["order_market_m2"] = self.market_2
       self.order_dict["order_size_m2"] = realized_order_size     
       self.order_dict["order_time_m2"] = datetime.now().isoformat()
+      logger.debug(pformat(self.order_dict))
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
       self.order_dict["comments"] = f"Market 2 {self.market_2}: , {e}"

@@ -76,9 +76,19 @@ async def main():
       try:
         logger.info("\n\n------------------------------------------Managing exits...--------------------------------------------------------")
         await manage_trade_exits(node, indexer, wallet)
+      except OSError as e:
+        if e.errno == 5:  # Check if the error number is Errno 5
+          logger.error(f"Input/output error: {e}. Trying to reconnect...")
+          try:
+            logger.info("Reconnecting....")
+            # Ralph Grewe: We have to await because it's an async function
+            node, indexer, wallet = await connect_dydx()
+          except Exception as e:
+            logger.error("Error connecting to client: {e}")
+            exit(1) # Exit the script if reconnection fails         
       except Exception as e:
-        logger.error(f"Error managing exiting positions: {e}")
-        exit(1)
+          # General exception handlinglogger.error(f"Error managing exiting positions: {e}")
+          exit(1)
 
     # Place trades for opening positions
     if PLACE_TRADES:
@@ -92,6 +102,16 @@ async def main():
           logger.warning("Warning: Received http2 header with status 503, the service may be temporarily unavailable. Continuing...")
         else:
           logger.error(f"gRPC error: {rpc_error}")
+      except OSError as e:
+        if e.errno == 5:  # Check if the error number is Errno 5
+          logger.error(f"Input/output error: {e}. Trying to reconnect...")
+          try:
+            logger.info("Reconnecting....")
+            # Ralph Grewe: We have to await because it's an async function
+            node, indexer, wallet = await connect_dydx()
+          except Exception as e:
+            logger.error("Error connecting to client: {e}")
+            exit(1) # Exit the script if reconnection fails           
       except Exception as e:
                 # General exception handling
         logger.error(f"Error trading pairs: {e}")

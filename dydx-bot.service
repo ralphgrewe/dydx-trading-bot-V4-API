@@ -1,0 +1,13 @@
+[Unit]
+Description=Dydx Trading Bot Service
+After=network.target
+
+[Service]
+Type=simple
+User=dydx
+WorkingDirectory=/usr/local/lib/dydx-bot
+ExecStart=/usr/local/lib/dydx-bot/dydx-bot
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
