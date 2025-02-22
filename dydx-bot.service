@@ -8,6 +8,7 @@ User=dydx
 WorkingDirectory=/usr/local/lib/dydx-bot
 ExecStart=/usr/local/lib/dydx-bot/dydx-bot
 Restart=on-failure
+RestartPreventExitStatus=2
 
 [Install]
 WantedBy=multi-user.target

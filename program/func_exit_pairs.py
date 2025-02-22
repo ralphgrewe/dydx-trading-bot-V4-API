@@ -102,6 +102,7 @@ async def manage_trade_exits(node, indexer, wallet):
       continue
 
     # Get prices
+    logger.debug("Getting candles")
     series_1 = get_candles_recent(indexer, position_market_m1)
     time.sleep(0.2)
     series_2 = get_candles_recent(indexer, position_market_m2)
@@ -109,12 +110,12 @@ async def manage_trade_exits(node, indexer, wallet):
 
     # Get markets for reference of tick size
     markets = await indexer.markets.get_perpetual_markets()
-
     # Protect API
     time.sleep(0.2)
 
     # Trigger close based on Z-Score
     if CLOSE_AT_ZSCORE_CROSS:
+      logger.debug("Checking Z-Score")
 
       # Initialize z_scores
       hedge_ratio = float(position["hedge_ratio"])
@@ -138,7 +139,7 @@ async def manage_trade_exits(node, indexer, wallet):
     # Add any other close logic you want here
     # Trigger is_close
     ###
-
+    logger.debug(f"Closing position is: {is_close}")
     # Close positions if triggered
     if is_close:
 
@@ -163,6 +164,7 @@ async def manage_trade_exits(node, indexer, wallet):
       accept_price_m2 = float(format_number(accept_price_m2, tick_size_m2))
 
       # Close positions
+      logger.info("Placing oders for closing...")
       try:
 
         # Close position for market 1
