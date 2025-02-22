@@ -190,7 +190,7 @@ class BotAgent:
       )
 
       # Store the order id
-      logger.debug("Placed Quote Order, realized size: {realized_order_size}") 
+      logger.debug(f"Placed Quote Order, realized size: {realized_order_size}") 
       self.order_dict["order_client_id_m2"] = quote_order.order_id.client_id
       self.order_dict["order_market_m2"] = self.market_2
       self.order_dict["order_size_m2"] = realized_order_size     
@@ -227,29 +227,19 @@ class BotAgent:
         logger.debug(pformat(close_order))
         # Ensure order is live before proceeding
         time.sleep(2)
-        close_order = await get_order_by_client_id(self.indexer, close_order.order_id.client_id)
-        if close_order == None:
+        close_order_status = await self.check_order_status_by_id(close_order.order_id.client_id)
+        if close_order_status != "live":
           logger.info("ABORT PROGRAM")
           logger.info("Unexpected Error")
-          exit(1)
+          logger.info(close_order_status)
+          exit(2)
 
-        order_status_close_order = close_order["status"]
-        logger.debug(f"Checking Close Order Status: {order_status_close_order}")
-        if order_status_close_order != "FILLED":
-          logger.info("ABORT PROGRAM")
-          logger.info("Unexpected Error")
-          logger.info(order_status_close_order)
-
-          # ABORT
-          exit(1)
-        else:
-          return self.order_dict
+        return self.order_dict
       except Exception as e:
         self.order_dict["pair_status"] = "ERROR"
         self.order_dict["comments"] = f"Close Market 1 {self.market_1}: , {e}"
         logger.error("ABORT PROGRAM")
         logger.error("Unexpected Error")
-        logger.error(order_status_close_order)
 
         # ABORT
         exit(1)
@@ -258,4 +248,3 @@ class BotAgent:
     else:
       self.order_dict["pair_status"] = "LIVE"
       return self.order_dict
-      

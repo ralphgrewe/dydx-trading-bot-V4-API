@@ -171,7 +171,7 @@ async def manage_trade_exits(node, indexer, wallet):
         print(">>> Closing market 1 <<<")
         print(f"Closing position for {position_market_m1}")
 
-        close_order_m1_transaction, close_order_m1 = place_market_order(
+        close_order_size, close_order_m1_transaction, close_order_m1 = await place_market_order(
           node,
           indexer,
           wallet,
@@ -192,7 +192,7 @@ async def manage_trade_exits(node, indexer, wallet):
         print(">>> Closing market 2 <<<")
         print(f"Closing position for {position_market_m2}")
 
-        close_order_m2_transaction, close_order_m2 = place_market_order(
+        close_order_size, close_order_m2_transaction, close_order_m2 = await place_market_order(
           node,
           indexer,
           wallet,
