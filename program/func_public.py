@@ -90,7 +90,7 @@ async def construct_market_prices(indexer):
           if openInterest > MARKET_MIN_OPEN_INTEREST:
             tradeable_markets.append(market)
       else:
-          logger.info("Market not active: ", market)
+          logger.info(f"Market not active: {market}")
 
   logger.debug("Tradeable Markets:")
   logger.debug(tradeable_markets)
