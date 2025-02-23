@@ -98,7 +98,7 @@ async def manage_trade_exits(node, indexer, wallet):
     logger.info(f"checkm1: {position_market_m1}, {order_market_m1}; size: {position_size_m1}, {order_size_m1}; side: {position_side_m1}, {order_side_m1}")
     logger.info(f"checkm2: {position_market_m2}, {order_market_m2}; size: {position_size_m2}, {order_size_m2}; side: {position_side_m2}, {order_side_m2}")
     if not check_m1 or not check_m2 or not check_live:
-      print(f"Warning: Not all open positions match exchange records for {position_market_m1} and {position_market_m2}")
+      logger.error(f"Warning: Not all open positions match exchange records for {position_market_m1} and {position_market_m2}")
       continue
 
     # Get prices

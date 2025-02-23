@@ -200,7 +200,7 @@ class BotAgent:
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
       self.order_dict["comments"] = f"Market 2 {self.market_2}: , {e}"
-      logger.info(f"Error placing order for {self.market_1}: {e}")
+      logger.info(f"Error placing order for {self.market_2}: {e}")
       return self.order_dict
 
     # Ensure order is live before processing
@@ -210,7 +210,7 @@ class BotAgent:
     # Guard: Aborder if order failed
     if order_status_m2 != "live":
       self.order_dict["pair_status"] = "ERROR"
-      self.order_dict["comments"] = f"{self.market_1} failed to fill"
+      self.order_dict["comments"] = f"{self.market_2} failed to fill"
 
       # Close order 1:
       # Ralph Grewe: Several attempts to avoid aborting early on narrow markets
