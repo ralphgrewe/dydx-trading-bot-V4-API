@@ -43,7 +43,7 @@ async def main():
       logger.info("Closing all positions...")
       close_orders = await abort_all_positions(node, indexer, wallet)
     except Exception as e:
-      logger.info("Error closing all positions: {e}")
+      logger.info(f"Error closing all positions: {e}")
       exit(1)
 
   # Find Cointegrated Pairs
@@ -65,7 +65,7 @@ async def main():
         logger.error("Error saving cointegrated pairs")
         exit(1)
     except Exception as e:
-      logger.error("Error saving cointegrated pairs: {e}")
+      logger.error(f"Error saving cointegrated pairs: {e}")
       exit(1)
 
   # Run as always on
@@ -84,10 +84,11 @@ async def main():
             # Ralph Grewe: We have to await because it's an async function
             node, indexer, wallet = await connect_dydx()
           except Exception as e:
-            logger.error("Error connecting to client: {e}")
+            logger.error(f"Error connecting to client: {e}")
             exit(1) # Exit the script if reconnection fails         
       except Exception as e:
-          # General exception handlinglogger.error(f"Error managing exiting positions: {e}")
+          # General exception handling
+          logger.error(f"Error managing exiting positions: {e}")
           exit(1)
 
     # Place trades for opening positions
@@ -110,7 +111,7 @@ async def main():
             # Ralph Grewe: We have to await because it's an async function
             node, indexer, wallet = await connect_dydx()
           except Exception as e:
-            logger.error("Error connecting to client: {e}")
+            logger.error(f"Error connecting to client: {e}")
             exit(1) # Exit the script if reconnection fails           
       except Exception as e:
                 # General exception handling

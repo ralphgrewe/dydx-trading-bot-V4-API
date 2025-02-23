@@ -97,11 +97,10 @@ async def construct_market_prices(indexer):
   
   # Set initial DateFrame
   logger.debug("Retrieving candles...")
+  logger.info(f"Fetching market: {tradeable_markets[0]}")
   close_prices = await get_candles_historical(indexer, tradeable_markets[0])
   df = pd.DataFrame(close_prices)
   df.set_index("datetime", inplace=True)
-  # Log the head of the DataFrame
-  logger.debug("DataFrame Head:\n%s", df.head())
 
   # Append other prices to DataFrame
   # You can limit the amount to loop though here to save time in development
