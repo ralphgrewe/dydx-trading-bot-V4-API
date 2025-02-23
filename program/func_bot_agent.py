@@ -245,18 +245,14 @@ class BotAgent:
           logger.error("Unexpected Error")
           logger.error(e)
 
-        if basePositionOpen:
-          logger.error("ABORT PROGRAM")
-          logger.error("Unexpected Error")
-          logger.error(close_order_status)
-          exit(2) # Probably half-opened position left over - abort with error code 2
-
-       # Store the order id
-        return self.order_dict
-
-
-        # ABORT
+      if basePositionOpen:
+        logger.error("ABORT PROGRAM")
+        logger.error("Unexpected Error")
+        logger.error(close_order_status)
         exit(2) # Probably half-opened position left over - abort with error code 2
+
+      # Store the order id
+      return self.order_dict
 
     # Return success result
     else:
