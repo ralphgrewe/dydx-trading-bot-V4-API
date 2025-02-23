@@ -149,7 +149,7 @@ class BotAgent:
       )
 
       # Store the order id
-      logger.debug("Placed Base Order, realized size: {realized_order_size}")
+      logger.debug(f"Placed Base Order, realized size: {realized_order_size}")
       self.order_dict["order_client_id_m1"] = base_order.order_id.client_id
       self.order_dict["order_market_m1"] = self.market_1
       self.order_dict["order_size_m1"] = realized_order_size
@@ -212,37 +212,50 @@ class BotAgent:
       self.order_dict["comments"] = f"{self.market_1} failed to fill"
 
       # Close order 1:
-      try:
-        realized_order_size, close_order_transaction, close_order = await place_market_order(
-          self.node,
-          self.indexer,
-          self.wallet,
-          market_id=self.market_1,
-          side=self.quote_side,
-          size=self.base_size,
-          price=self.accept_failsafe_base_price,
-          reduce_only=True
-        )
-        logger.debug("Placed Close Order:")
-        logger.debug(pformat(close_order))
-        # Ensure order is live before proceeding
-        time.sleep(2)
-        close_order_status = await self.check_order_status_by_id(close_order.order_id.client_id)
-        if close_order_status != "live":
-          logger.info("ABORT PROGRAM")
-          logger.info("Unexpected Error")
-          logger.info(close_order_status)
-          exit(2)
+      # Ralph Grewe: Several attempts to avoid aborting early on narrow markets
+      basePositionOpen = True
+      for closingAttempt in range(10):
+        try:
+          realized_order_size, close_order_transaction, close_order = await place_market_order(
+            self.node,
+            self.indexer,
+            self.wallet,
+            market_id=self.market_1,
+            side=self.quote_side,
+            size=self.base_size,
+            price=self.accept_failsafe_base_price,
+            reduce_only=True
+          )
+          logger.debug("Placed Close Order:")
+          logger.debug(pformat(close_order))
+          # Ensure order is live before proceeding
+          time.sleep(2)
+          close_order_status = await self.check_order_status_by_id(close_order.order_id.client_id)
 
+          if close_order_status == "live":
+            logger.info(f"Aborted base position {self.market_1} in {closingAttempt} attempts")
+            basePositionOpen = False
+            break
+
+        except Exception as e:
+          self.order_dict["pair_status"] = "ERROR"
+          self.order_dict["comments"] = f"Close Market 1 {self.market_1}: , {e}"
+          logger.error("ABORT PROGRAM")
+          logger.error("Unexpected Error")
+          logger.error(e)
+
+        if basePositionOpen:
+          logger.error("ABORT PROGRAM")
+          logger.error("Unexpected Error")
+          logger.error(close_order_status)
+          exit(2) # Probably half-opened position left over - abort with error code 2
+
+       # Store the order id
         return self.order_dict
-      except Exception as e:
-        self.order_dict["pair_status"] = "ERROR"
-        self.order_dict["comments"] = f"Close Market 1 {self.market_1}: , {e}"
-        logger.error("ABORT PROGRAM")
-        logger.error("Unexpected Error")
+
 
         # ABORT
-        exit(1)
+        exit(2) # Probably half-opened position left over - abort with error code 2
 
     # Return success result
     else:
