@@ -103,6 +103,7 @@ class BotAgent:
       return "failed"
     # Guard: If order not filled wait until order expiration
     else:
+      logger.debug("Waiting for order to be fullfilled before checking again...")
       time.sleep(15)
       order = await get_order_by_client_id(self.indexer, order_client_id)
       if order == None:
