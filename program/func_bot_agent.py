@@ -62,14 +62,14 @@ class BotAgent:
       "hedge_ratio": hedge_ratio,
       "z_score": z_score,
       "half_life": half_life,
-      "order_id_m1": "",
+      "order_m1_id": "",
       "order_m1_size": base_size,
       "order_m1_side": base_side,
-      "order_time_m1": "",
-      "order_id_m2": "",
+      "order_m1_time": "",
+      "order_m2_id": "",
       "order_m2_size": quote_size,
       "order_m2_side": quote_side,
-      "order_time_m2": "",
+      "order_m2_time": "",
       "pair_status": "",
       "comments": "",
     }
@@ -151,10 +151,9 @@ class BotAgent:
 
       # Store the order id
       logger.debug(f"Placed Base Order, realized size: {realized_order_size}")
-      self.order_dict["order_client_id_m1"] = base_order.order_id.client_id
-      self.order_dict["order_market_m1"] = self.market_1
-      self.order_dict["order_size_m1"] = realized_order_size
-      self.order_dict["order_time_m1"] = datetime.now().isoformat()
+      self.order_dict["order_m1_id"] = base_order.order_id.client_id
+      self.order_dict["order_m1_size"] = realized_order_size
+      self.order_dict["order_m1_time"] = datetime.now().isoformat()
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
       self.order_dict["comments"] = f"Market 1 {self.market_1}: , {e}"
@@ -162,7 +161,7 @@ class BotAgent:
       return self.order_dict
 
     # Ensure order is live before processing
-    order_status_m1 = await self.check_order_status_by_id(self.order_dict["order_client_id_m1"])
+    order_status_m1 = await self.check_order_status_by_id(self.order_dict["order_m1_id"])
     logger.debug(f"Checking Base Order Status: {order_status_m1}")
 
     # Guard: Aborder if order failed
@@ -192,10 +191,9 @@ class BotAgent:
 
       # Store the order id
       logger.debug(f"Placed Quote Order, realized size: {realized_order_size}") 
-      self.order_dict["order_client_id_m2"] = quote_order.order_id.client_id
-      self.order_dict["order_market_m2"] = self.market_2
-      self.order_dict["order_size_m2"] = realized_order_size     
-      self.order_dict["order_time_m2"] = datetime.now().isoformat()
+      self.order_dict["order_m2_id"] = quote_order.order_id.client_id
+      self.order_dict["order_m2_size"] = realized_order_size     
+      self.order_dict["order_m2_time"] = datetime.now().isoformat()
       logger.debug(pformat(self.order_dict))
     except Exception as e:
       self.order_dict["pair_status"] = "ERROR"
@@ -204,7 +202,7 @@ class BotAgent:
       return self.order_dict
 
     # Ensure order is live before processing
-    order_status_m2 = await self.check_order_status_by_id(self.order_dict["order_client_id_m2"])
+    order_status_m2 = await self.check_order_status_by_id(self.order_dict["order_m2_id"])
     logger.debug(f"Checking Quote Oder Status: {order_status_m2}")
 
     # Guard: Aborder if order failed

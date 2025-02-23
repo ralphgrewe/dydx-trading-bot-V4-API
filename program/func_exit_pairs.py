@@ -66,8 +66,8 @@ async def manage_trade_exits(node, indexer, wallet):
     time.sleep(0.5)
 
     # Get order info m1 per exchange
-    logger.info(f"Order M1 ID:  {position['order_client_id_m1']}")
-    order_m1 = await get_order_by_client_id(indexer, position["order_client_id_m1"])
+    logger.info(f"Order M1 ID:  {position['order_m1_id']}")
+    order_m1 = await get_order_by_client_id(indexer, position["order_m1_id"])
     order_market_m1 = order_m1["ticker"]
     order_size_m1 = float(order_m1["size"])
     if order_m1["side"] == "SELL":
@@ -80,7 +80,7 @@ async def manage_trade_exits(node, indexer, wallet):
     time.sleep(0.5)
 
     # Get order info m2 per exchange
-    order_m2 = await get_order_by_client_id(indexer, position["order_client_id_m2"])
+    order_m2 = await get_order_by_client_id(indexer, position["order_m2_id"])
     order_market_m2 = order_m2["ticker"]
     order_size_m2 = float(order_m2["size"])
     if order_m2["side"] == "SELL":
