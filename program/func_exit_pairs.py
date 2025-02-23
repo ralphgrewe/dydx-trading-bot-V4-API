@@ -103,9 +103,9 @@ async def manage_trade_exits(node, indexer, wallet):
 
     # Get prices
     logger.debug("Getting candles")
-    series_1 = get_candles_recent(indexer, position_market_m1)
+    series_1 = await get_candles_recent(indexer, position_market_m1)
     time.sleep(0.2)
-    series_2 = get_candles_recent(indexer, position_market_m2)
+    series_2 = await get_candles_recent(indexer, position_market_m2)
     time.sleep(0.2)
 
     # Get markets for reference of tick size
