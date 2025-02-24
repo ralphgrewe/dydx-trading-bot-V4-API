@@ -168,8 +168,8 @@ async def manage_trade_exits(node, indexer, wallet):
       try:
 
         # Close position for market 1
-        print(">>> Closing market 1 <<<")
-        print(f"Closing position for {position_market_m1}")
+        logger.info(">>> Closing market 1 <<<")
+        logger.info(f"Closing position for {position_market_m1}")
 
         close_order_size, close_order_m1_transaction, close_order_m1 = await place_market_order(
           node,
@@ -182,15 +182,15 @@ async def manage_trade_exits(node, indexer, wallet):
           reduce_only=True,
         )
 
-        print(close_order_m1["order"]["id"])
-        print(">>> Closing <<<")
+        logger.info(close_order_m1["order"]["id"])
+        logger.info(">>> Closing <<<")
 
         # Protect API
         time.sleep(1)
 
         # Close position for market 2
-        print(">>> Closing market 2 <<<")
-        print(f"Closing position for {position_market_m2}")
+        logger.info(">>> Closing market 2 <<<")
+        logger.info(f"Closing position for {position_market_m2}")
 
         close_order_size, close_order_m2_transaction, close_order_m2 = await place_market_order(
           node,
@@ -203,11 +203,11 @@ async def manage_trade_exits(node, indexer, wallet):
           reduce_only=True,
         )
 
-        print(close_order_m2["order"]["id"])
-        print(">>> Closing <<<")
+        logger.info(close_order_m2["order"]["id"])
+        logger.info(">>> Closing <<<")
 
       except Exception as e:
-        print(f"Exit failed for {position_market_m1} with {position_market_m2}")
+        logger.info(f"Exit failed for {position_market_m1} with {position_market_m2}")
         save_output.append(position)
 
     # Keep record if items and save
@@ -215,6 +215,6 @@ async def manage_trade_exits(node, indexer, wallet):
       save_output.append(position)
 
   # Save remaining items
-  print(f"{len(save_output)} Items remaining. Saving file...")
+  logger.info(f"{len(save_output)} Items remaining. Saving file...")
   with open("bot_agents.json", "w") as f:
     json.dump(save_output, f)

@@ -3,8 +3,6 @@ from func_utils import format_number
 import time
 import json
 
-from pprint import pformat
-
 #Ralph Grewe: Additional Imports
 from constants import DYDX_ADDRESS
 from dydx_v4_client.node.market import Market
@@ -141,7 +139,7 @@ async def get_open_positions(indexer):
                       open_positions.append(position)
       logger.debug(pformat(f"Open Positions: {open_positions}"))
   except Exception as e:
-      print(f"Error getting open positions: {e}")
+      logger.error(f"Error getting open positions: {e}")
       exit(1)
   
   return open_positions
@@ -234,6 +232,6 @@ async def get_order_by_client_id(indexer, order_client_id, order_market=None, or
               continue
           order_result = order
     except Exception as e:
-        print(f"Exception when retrieving order status: {e}")
+        logger.error(f"Exception when retrieving order status: {e}")
 
     return order_result
