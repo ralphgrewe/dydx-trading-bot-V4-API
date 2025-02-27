@@ -221,11 +221,11 @@ class BotAgent:
             self.wallet,
             market_id=self.market_1,
             side=self.quote_side,
-            size=self.base_size,
+            size=self.order_dict["order_m1_size"],
             price=self.accept_failsafe_base_price,
             reduce_only=True
           )
-          logger.debug("Placed Close Order:")
+          logger.debug(f"Placed Close Order, Market: {self.market_1}, price: {self.accept_failsafe_base_price}, , size: {self.order_dict["order_m1_size"]}, realized size: {realized_order_size}")
           logger.debug(pformat(close_order))
           # Ensure order is live before proceeding
           time.sleep(2)
