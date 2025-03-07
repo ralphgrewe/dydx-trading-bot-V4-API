@@ -124,16 +124,16 @@ async def manage_trade_exits(node, indexer, wallet):
         spread = series_1 - (hedge_ratio * series_2)
         z_score_current = calculate_zscore(spread).values.tolist()[-1]
 
-      # Determine trigger
-      z_score_level_check = abs(z_score_current) >= abs(z_score_traded)
-      z_score_cross_check = (z_score_current < 0 and z_score_traded > 0) or (z_score_current > 0 and z_score_traded < 0)
+        # Determine trigger
+        z_score_level_check = abs(z_score_current) >= abs(z_score_traded)
+        z_score_cross_check = (z_score_current < 0 and z_score_traded > 0) or (z_score_current > 0 and z_score_traded < 0)
 
-      logger.info(f"{order_market_m1} vs {order_market_m2}: zscore {z_score_current}")
-      # Close trade
-      if z_score_level_check and z_score_cross_check:
+        logger.info(f"{order_market_m1} vs {order_market_m2}: zscore {z_score_current}")
+        # Close trade
+        if z_score_level_check and z_score_cross_check:
 
-        # Initiate close trigger
-        is_close = True
+          # Initiate close trigger
+          is_close = True
 
     ###
     # Add any other close logic you want here
